@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>天天記帳舖</title>
+<meta name="description" content="天天記帳舖：會掃碼、會印收據的 3D 小商店記帳網頁。">
+<meta name="theme-color" content="#2FB8A6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="天天記帳舖">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Clay-diorama world: cool studio backdrop with toy-like mint / sun / tomato / lilac accents.
+     Layout: one fixed 1200x720 stage scaled to fit; the order card docks inside on wide screens, below on phones. */
+  --bg:#E4E9F2;
+  --ink:#2A2F45;
+  --ink-2:#5B6380;
+  --mint:#2FB8A6;
+  --sun:#FFC94D;
+  --tomato:#F0614F;
+  --lilac:#8E7CF0;
+  --f-display:"Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--f-body);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--lilac);outline-offset:3px}
+.app{min-height:100%;display:flex;flex-direction:column;align-items:center;padding:12px 16px 24px}
+.stage-wrap{position:relative;width:100%;max-width:1560px}
+.stage{position:absolute;top:0;left:0;width:1200px;height:720px;transform-origin:0 0;overflow:hidden;border-radius:34px;
+  background:
+    radial-gradient(60% 18% at 36% 98%, rgba(42,47,69,.22), rgba(42,47,69,0) 70%),
+    radial-gradient(90% 70% at 50% 0%, #FFFFFF 0%, #EEF2F8 55%, #D9E0EC 100%);
+  box-shadow:0 40px 80px -40px rgba(42,47,69,.5), inset 0 2px 0 #fff;}
+.mobile-slot{width:100%;max-width:560px;margin-top:14px}
+
+/* ---------- top-left round buttons ---------- */
+.rbtn{position:absolute;top:44px;width:102px;height:102px;border-radius:50%;border:0;cursor:pointer;z-index:9;
+  font-family:var(--f-display);font-size:20px;line-height:1.05;letter-spacing:.06em;display:grid;place-items:center;align-content:center;gap:4px;
+  background:radial-gradient(70% 70% at 34% 26%, rgba(255,255,255,.8), rgba(255,255,255,0) 58%), var(--c);
+  box-shadow:0 9px 0 var(--d), 0 24px 30px -10px rgba(42,47,69,.5), inset 0 -10px 18px rgba(0,0,0,.12), inset 0 3px 0 rgba(255,255,255,.6);
+  transition:transform .12s ease, box-shadow .12s ease}
+.rbtn:hover{transform:translateY(-3px)}
+.rbtn:active,.rbtn.pressed{transform:translateY(8px);box-shadow:0 1px 0 var(--d),0 8px 14px -6px rgba(42,47,69,.5), inset 0 -6px 12px rgba(0,0,0,.12)}
+.rbtn svg{width:30px;height:30px}
+.rbtn small{font-size:13px;letter-spacing:.1em;opacity:.85}
+#btnCust{left:40px;--c:#A99BF6;--d:#6C5BD0;color:#fff}
+#btnCart{left:156px;--c:#7FE3D2;--d:#1E9C8C;color:#0B4A42}
+#btnRec{left:272px;--c:#FFD76A;--d:#D3A02A;color:#4A3500}
+#btnPay{left:388px;--c:#FF7B6A;--d:#C9473A;color:#fff}
+.badge{position:absolute;top:2px;right:2px;min-width:26px;height:26px;padding:0 7px;border-radius:13px;background:var(--tomato);color:#fff;
+  font-family:var(--f-body);font-size:14px;font-weight:700;line-height:26px;box-shadow:0 3px 6px rgba(0,0,0,.25);font-variant-numeric:tabular-nums}
+.badge[hidden]{display:none}
+.rbtn.bump{animation:bump .5s ease}
+@keyframes bump{30%{transform:scale(1.15)}60%{transform:scale(.95)}}
+
+/* ---------- HUD ---------- */
+.hud{position:absolute;left:510px;top:48px;width:252px;z-index:8}
+.hud .date{font-family:var(--f-display);font-size:28px;line-height:1.1}
+.hud .date span{font-size:18px;color:var(--ink-2);margin-left:6px}
+.hud .today{margin-top:8px;font-size:15px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.hud .today b{color:var(--ink);font-size:18px}
+.hud .row{display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:999px;background:#fff;border:0;
+  box-shadow:0 4px 10px -4px rgba(42,47,69,.35);font-size:13px;color:var(--ink-2);cursor:default}
+.chip svg{width:16px;height:16px}
+button.chip{cursor:pointer}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:#B9C0D0}
+.chip.sync-cloud .dot{background:var(--mint)}
+.chip.sync-load .dot{background:var(--sun);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+
+/* ---------- store diorama ---------- */
+#store{position:absolute;left:40px;top:200px;width:660px;height:500px;z-index:1;overflow:visible}
+.store-shadow{position:absolute;left:46px;top:212px;width:648px;height:494px;border-radius:24px;z-index:0;box-shadow:0 22px 30px -8px rgba(42,47,69,.35)}
+#store text{font-family:var(--f-display)}
+.s-wall{fill:var(--wall)} .s-wain{fill:var(--wain)} .s-side{fill:var(--side)} .s-ceil{fill:var(--ceil)} .s-floor{fill:var(--floor)}
+.s-ctop{fill:var(--ctop)} .s-cfront{fill:var(--cfront)} .s-cstripe{fill:var(--cstripe)} .s-shelf{fill:var(--shelf)}
+.s-trim{fill:var(--trim)} .s-trimStroke{stroke:var(--trim)} .s-sign{fill:var(--sign)} .s-signText{fill:var(--signText)} .s-lamp{fill:var(--lamp)}
+.hot{cursor:pointer}
+#cashierWrap{outline:none}
+.hot:hover{filter:brightness(1.06) saturate(1.08)}
+#zzz{animation:zz 2.4s ease-in-out infinite}
+@keyframes zz{50%{transform:translate(-4px,-6px);opacity:.4}}
+.lights-blink{animation:pulse 1.6s infinite}
+
+/* ---------- bubble ---------- */
+.bubble{position:absolute;left:556px;top:234px;z-index:7;min-width:120px;max-width:212px;padding:10px 16px;border-radius:22px;background:#fff;
+  font-family:var(--f-display);font-size:17px;line-height:1.35;color:var(--ink);box-shadow:0 10px 22px -10px rgba(42,47,69,.5);
+  transition:transform .25s ease}
+.bubble::after{content:"";position:absolute;left:18px;bottom:-12px;width:22px;height:18px;background:#fff;clip-path:polygon(0 0,100% 0,10% 100%)}
+.bubble.talk{animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(.7)}}
+.bubble .pts{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.bubble .pts small{font-size:13px;color:var(--ink-2)}
+.bubble .pts b{font-size:24px;color:#B9770E;font-variant-numeric:tabular-nums}
+.bubble .star{color:#F5B400;font-size:20px}
+.mini-bubble{position:absolute;z-index:7;padding:6px 12px;border-radius:16px;background:#fff;font-family:var(--f-display);font-size:15px;
+  box-shadow:0 8px 16px -8px rgba(42,47,69,.5);animation:pop .35s cubic-bezier(.3,1.6,.5,1);pointer-events:none}
+
+/* ---------- conveyor ---------- */
+.belt{position:absolute;left:592px;top:512px;width:604px;height:170px;z-index:2;pointer-events:none}
+.belt-top{position:absolute;left:0;top:0;width:100%;height:44px;border-radius:22px 0 0 22px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%, rgba(0,0,0,.25)),
+    repeating-linear-gradient(115deg, #3B4155 0 30px, #262A38 30px 35px);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.25)}
+.belt-front{position:absolute;left:0;top:44px;width:100%;height:24px;border-radius:0 0 0 14px;
+  background:linear-gradient(180deg,#E3E8F0,#A3ADBF 70%,#8590A4)}
+.belt-front::before{content:"";position:absolute;inset:8px 20px auto 20px;height:6px;
+  background:radial-gradient(circle,#6D778B 2.2px,transparent 2.6px) 0 0/40px 6px}
+.belt-leg{position:absolute;top:68px;width:16px;height:92px;border-radius:4px;background:linear-gradient(90deg,#8590A4,#D7DDE7 40%,#7B8599)}
+.belt-leg::after{content:"";position:absolute;left:-10px;bottom:-4px;width:36px;height:8px;border-radius:4px;background:#5A6378}
+.belt-roller{position:absolute;left:-8px;top:8px;width:30px;height:56px;border-radius:15px;background:linear-gradient(90deg,#6D778B,#E8ECF2 45%,#8590A4)}
+
+/* ---------- items ---------- */
+.item{position:absolute;left:0;top:0;width:96px;height:96px;z-index:5;will-change:transform;pointer-events:none}
+.item-in{width:100%;height:100%;position:relative}
+.item.drop .item-in{animation:drop .5s cubic-bezier(.3,1.4,.5,1)}
+@keyframes drop{0%{transform:translateY(-150px) scale(.8,1.2)}70%{transform:translateY(0) scale(1.08,.92)}}
+.item.moving .item-in{animation:wob .45s ease-in-out infinite alternate}
+@keyframes wob{to{transform:translateY(-2px) rotate(-1.5deg)}}
+.item svg{width:96px;height:96px;display:block}
+.item .tag{position:absolute;right:-6px;top:4px;padding:2px 8px;border-radius:10px;background:#fff;font-family:var(--f-display);font-size:13px;
+  box-shadow:0 4px 8px -4px rgba(42,47,69,.5);white-space:nowrap;font-variant-numeric:tabular-nums}
+.fx{position:absolute;inset:0;width:1200px;height:720px;z-index:6;pointer-events:none}
+.beep-text{position:absolute;z-index:7;font-family:var(--f-display);font-style:italic;font-size:26px;color:#7B5CFF;pointer-events:none;
+  text-shadow:0 2px 0 #fff;animation:beepUp .8s ease forwards}
+@keyframes beepUp{0%{transform:scale(.4);opacity:0}25%{transform:scale(1.15);opacity:1}100%{transform:translateY(-26px);opacity:0}}
+.spark{position:absolute;z-index:7;width:10px;height:10px;border-radius:50%;background:#FFE27A;pointer-events:none;box-shadow:0 0 10px #FFC94D}
+.heart{position:absolute;z-index:7;font-size:22px;color:#FF6B8B;pointer-events:none;animation:heart 1.3s ease-out forwards}
+@keyframes heart{to{transform:translate(var(--dx),-70px) scale(1.3);opacity:0}}
+
+/* ---------- order card ---------- */
+.order{position:absolute;left:772px;top:28px;width:396px;padding:20px 22px 22px;border-radius:26px;z-index:8;
+  background:linear-gradient(180deg,#FFFFFF,#F5F7FB);
+  box-shadow:inset 0 2px 0 #fff, 0 20px 40px -18px rgba(42,47,69,.45), 0 0 0 1px rgba(42,47,69,.06)}
+.mobile-slot .order{position:relative;left:auto;top:auto;width:100%}
+.order h2{margin:0 0 12px;font-family:var(--f-display);font-weight:400;font-size:21px;display:flex;align-items:center;gap:8px}
+.order h2 small{font-family:var(--f-body);font-size:12px;color:var(--ink-2);margin-left:auto}
+.field{display:grid;grid-template-columns:58px 1fr;align-items:center;gap:10px;margin-bottom:10px}
+.field>label,.field>.lbl{font-family:var(--f-display);font-size:18px}
+.field input{width:100%;height:42px;border-radius:14px;border:2px solid #E1E6EF;background:#fff;padding:0 14px;font-size:16px;color:var(--ink);
+  box-shadow:inset 0 2px 4px rgba(42,47,69,.06);transition:border-color .15s}
+.field input:focus{outline:none;border-color:var(--lilac)}
+.cat-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:-2px}
+.cat-btn{border:2px solid transparent;border-radius:16px;background:#EEF1F7;padding:4px 2px 6px;display:grid;justify-items:center;cursor:pointer;font-size:13px;
+  transition:background .15s, box-shadow .15s, border-color .15s}
+.cat-btn svg{width:48px;height:48px;transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+.cat-btn:hover svg{transform:translateY(-3px) rotate(-5deg)}
+.cat-btn[aria-checked="true"]{background:#fff;border-color:var(--lilac);box-shadow:0 8px 16px -8px rgba(142,124,240,.8)}
+.price{position:relative}
+.price span{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-family:var(--f-display);color:var(--ink-2);font-size:15px}
+.price input{padding-left:50px;font-variant-numeric:tabular-nums}
+.ok-row{display:flex;align-items:center;gap:12px;margin-top:6px}
+.ok-btn{flex:1;height:52px;border:0;border-radius:18px;cursor:pointer;font-family:var(--f-display);font-size:22px;letter-spacing:.3em;color:#fff;
+  background:radial-gradient(60% 90% at 30% 10%, rgba(255,255,255,.45), rgba(255,255,255,0) 60%), var(--mint);
+  box-shadow:0 6px 0 #1E8A7C, 0 16px 22px -10px rgba(30,138,124,.7);transition:transform .1s, box-shadow .1s}
+.ok-btn:active{transform:translateY(5px);box-shadow:0 1px 0 #1E8A7C,0 6px 10px -6px rgba(30,138,124,.7)}
+.msg{min-height:18px;font-size:13px;color:var(--tomato);margin-top:8px}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;z-index:50;display:none}
+.overlay.open{display:block}
+.backdrop{position:absolute;inset:0;background:rgba(24,27,46,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transition:opacity .4s}
+.overlay.show .backdrop{opacity:1}
+.ov-top{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;padding:calc(14px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) 14px calc(18px + env(safe-area-inset-left));z-index:5;color:#fff;
+  opacity:0;transition:opacity .4s .2s}
+.overlay.show .ov-top{opacity:1}
+.ov-top h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:22px}
+.ov-top .sp{flex:1}
+.pchip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:#fff;color:var(--ink);font-family:var(--f-display);font-size:16px}
+.pchip b{color:#B9770E;font-size:20px;font-variant-numeric:tabular-nums}
+.pchip.glow{animation:bump .5s}
+.ghost{border:0;border-radius:999px;padding:8px 16px;background:rgba(255,255,255,.16);color:#fff;cursor:pointer;font-size:14px}
+.ghost:hover{background:rgba(255,255,255,.28)}
+.solid{border:0;border-radius:999px;padding:10px 20px;background:var(--sun);color:#3A2A00;cursor:pointer;font-family:var(--f-display);font-size:17px;
+  box-shadow:0 5px 0 #C99A25}
+.solid:active{transform:translateY(4px);box-shadow:0 1px 0 #C99A25}
+.print-stage{position:absolute;left:50%;bottom:calc(3vh + env(safe-area-inset-bottom));width:var(--pw);transform:translateX(-50%);z-index:3}
+.big-printer{position:relative;width:100%;z-index:2;transform-origin:0 0}
+.big-printer svg{display:block;width:100%;height:auto;overflow:visible}
+.big-printer.printing svg{animation:jitter .09s linear infinite}
+@keyframes jitter{50%{transform:translate(.6px,-.6px)}}
+.big-printer.printing .led1,.big-printer.printing .led2{animation:pulse .25s infinite}
+.paper-wrap{position:absolute;left:calc(var(--pw) * 62 / 240);width:calc(var(--pw) * 116 / 240);bottom:calc(var(--pw) * 120 / 240);z-index:3;
+  transform:perspective(900px) rotateX(6deg);transform-origin:50% 100%}
+.paper{position:absolute;left:0;right:0;bottom:0;height:0;overflow:hidden;background:#FFFEFA;
+  box-shadow:0 -6px 20px -6px rgba(0,0,0,.35);border-radius:2px 2px 0 0}
+.paper::-webkit-scrollbar{width:0}
+.paper-inner{position:absolute;left:0;right:0;top:0}
+.paper .receipt{font-size:clamp(10.5px, calc(var(--pw) * .0235), 12.5px)}
+.print-done{position:absolute;right:calc(20px + env(safe-area-inset-right));bottom:calc(20px + env(safe-area-inset-bottom));z-index:6;display:none;gap:10px;align-items:center;
+  opacity:0;transform:translateY(10px);transition:opacity .3s, transform .3s}
+.print-done.on{display:flex;animation:doneIn .35s ease forwards}
+@keyframes doneIn{to{opacity:1;transform:none}}
+.print-done .solid{padding:12px 24px;font-size:18px}
+.print-done .ghost{padding:10px 18px}
+@media (max-width:700px){
+  .print-stage{bottom:calc(76px + env(safe-area-inset-bottom))}
+  .print-done{left:16px;right:16px;bottom:calc(14px + env(safe-area-inset-bottom));justify-content:flex-end}
+}
+.scroll-hint{position:absolute;left:50%;top:calc(76px + env(safe-area-inset-top));transform:translateX(-50%);z-index:6;padding:6px 14px;border-radius:999px;
+  background:rgba(255,255,255,.92);color:var(--ink);font-size:13px;box-shadow:0 6px 14px -6px rgba(0,0,0,.4);opacity:0;transition:opacity .3s;pointer-events:none}
+.scroll-hint.on{opacity:1}
+.earn-pop{position:fixed;z-index:60;font-family:var(--f-display);font-size:30px;color:#FFE27A;text-shadow:0 3px 0 #9C6A00;pointer-events:none;animation:beepUp 1.4s ease forwards}
+.coin{position:fixed;z-index:61;width:22px;height:22px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 35% 30%, #FFF4B8, #FFC94D 50%, #D99A00);box-shadow:0 2px 0 #A87400;display:grid;place-items:center;color:#9C6A00;font-size:12px}
+
+/* ---------- receipt ---------- */
+.receipt{color:#23252B;font-size:12.5px;line-height:1.45;padding:0 14px;font-variant-numeric:tabular-nums}
+.rl{position:relative}
+.r-top{height:12px;margin:0 -14px;background:linear-gradient(135deg,transparent 6px,#FFFEFA 0) 0 0/12px 12px repeat-x, linear-gradient(225deg,transparent 6px,#FFFEFA 0) 0 0/12px 12px repeat-x;background-color:transparent}
+.r-store{text-align:center;font-family:var(--f-display);font-size:1.2em;padding-top:6px}
+.r-title{text-align:center;font-weight:900;font-size:1.36em;letter-spacing:.06em}
+.r-period{text-align:center;font-weight:900;font-size:1.52em}
+.r-no{text-align:center;font-weight:900;font-size:1.52em;letter-spacing:.04em}
+.r-meta,.r-meta2{display:flex;justify-content:space-between;gap:6px;font-size:.92em}
+.r-meta{justify-content:center}
+.r-bar{height:34px;margin:6px 0 4px;overflow:hidden;display:flex;align-items:stretch;justify-content:center;gap:0}
+.r-bar i{display:block;background:#1C1D22}
+.r-qr{display:flex;justify-content:space-between;padding:4px 6px 8px}
+.r-qr svg{width:44%;height:auto}
+.r-sep{text-align:center;color:#7B7F8C;font-size:.88em;letter-spacing:.15em;padding:4px 0}
+.r-item{display:grid;grid-template-columns:1.76em minmax(0,1fr) auto;gap:6px;align-items:center;padding:3px 0}
+.r-item.editable{grid-template-columns:1.76em minmax(0,1fr) auto 30px}
+.r-item svg{width:1.76em;height:1.76em}
+.r-item span{overflow-wrap:anywhere}.r-item small{display:block;color:#7B7F8C;font-size:.84em}
+.r-item .amt{font-weight:700}
+.ri-del{width:30px;height:30px;border-radius:50%;border:0;background:#F2F3F6;color:#9A9FB0;cursor:pointer;font-size:15px;line-height:1}
+.ri-del:hover{background:#FFE1DC;color:var(--tomato)}
+.r-sep2{border-top:1.5px dashed #9CA0AC;margin:6px 0}
+.r-total{display:flex;justify-content:space-between;font-weight:900;font-size:1.28em;padding:2px 0}
+.r-earn{display:flex;justify-content:space-between;gap:6px;padding:2px 0}
+.r-earn b{color:#B9770E}
+.r-thanks{text-align:center;font-size:.92em;color:#565A66;padding:10px 0 6px}
+.r-end{height:22px}
+.receipt.torn .r-end{background:linear-gradient(45deg,transparent 6px,#FFFEFA 0) 0 100%/12px 12px repeat-x, linear-gradient(-45deg,transparent 6px,#FFFEFA 0) 0 100%/12px 12px repeat-x;margin:0 -14px}
+
+/* ---------- modal sheets ---------- */
+.sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-46%) scale(.96);opacity:0;transition:transform .35s cubic-bezier(.3,1.4,.5,1),opacity .25s;
+  width:min(560px,94vw);max-height:92vh;max-height:92dvh;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border-radius:28px;background:linear-gradient(180deg,#FFFFFF,#F2F5FA);
+  box-shadow:0 30px 70px -20px rgba(0,0,0,.55);padding:20px 22px 22px}
+.overlay.show .sheet{transform:translate(-50%,-50%);opacity:1}
+.sheet-h{display:flex;align-items:center;gap:10px}
+.sheet-h h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:24px}
+.sheet-h .sp{flex:1}
+.x-btn{width:38px;height:38px;border-radius:50%;border:0;background:#E9EDF4;cursor:pointer;font-size:20px;color:var(--ink-2)}
+.x-btn:hover{background:#DDE3EE}
+.month{margin:8px 0 4px;color:var(--ink-2);font-size:14px;font-variant-numeric:tabular-nums}
+.month b{color:var(--ink);font-size:18px}
+.clip-area{position:relative;height:470px;margin-top:8px;perspective:1300px;touch-action:pan-y;user-select:none}
+.clip-svg{position:absolute;left:50%;top:0;width:150px;transform:translateX(-50%);z-index:300;pointer-events:none;filter:drop-shadow(0 6px 6px rgba(0,0,0,.3))}
+.board{position:absolute;left:50%;top:44px;width:min(330px, 100%);height:420px;transform:translateX(-50%);border-radius:18px;
+  background:linear-gradient(160deg,#D8B48A,#B98D5D);box-shadow:inset 0 2px 0 rgba(255,255,255,.4),0 14px 28px -12px rgba(0,0,0,.4)}
+.slip{position:absolute;left:0;right:0;margin:0 auto;top:56px;width:min(290px, calc(100% - 40px));transform-origin:50% 0;transition:transform .45s cubic-bezier(.3,1.2,.5,1),opacity .35s;
+  background:#FFFEFA;border-radius:3px 3px 0 0;box-shadow:0 6px 14px -6px rgba(0,0,0,.35);cursor:pointer;backface-visibility:hidden}
+.slip::after{content:"";position:absolute;left:0;right:0;bottom:-10px;height:10px;
+  background:linear-gradient(45deg,transparent 5px,#FFFEFA 0) 0 0/10px 10px repeat-x,linear-gradient(-45deg,transparent 5px,#FFFEFA 0) 0 0/10px 10px repeat-x}
+.slip-in{padding:50px 18px 14px;font-size:12.5px;font-variant-numeric:tabular-nums;position:relative;min-height:330px}
+.slip-store{text-align:center;font-family:var(--f-display);font-size:14px;color:var(--ink-2)}
+.slip-title{text-align:center;font-weight:900;font-size:17px;margin-top:2px}
+.slip-date{text-align:center;font-family:var(--f-display);font-size:20px;margin:4px 0 8px}
+.slip-row{display:grid;grid-template-columns:20px 1fr auto;gap:6px;align-items:center;padding:2px 0;border-bottom:1px dotted #D5D8E0}
+.slip-row svg{width:20px;height:20px}
+.slip-row span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slip .more{color:#8A8FA0;font-size:11.5px;padding-top:4px}
+.slip-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;font-weight:900}
+.slip-total b{font-size:20px}
+.slip-foot{color:#6E7386;font-size:12px;margin-top:2px}
+.stamp{position:absolute;right:16px;bottom:58px;transform:rotate(-14deg);border:3px solid currentColor;border-radius:10px;padding:2px 10px;
+  font-family:var(--f-display);font-size:18px;opacity:.75}
+.stamp.ok{color:#D2463A}
+.stamp.no{color:#8A90A3}
+.rec-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:6px}
+.nav-btn{width:40px;height:40px;border-radius:50%;border:0;background:#E9EDF4;cursor:pointer;font-size:20px}
+.nav-btn:disabled{opacity:.35;cursor:default}
+.rec-label{font-family:var(--f-display);font-size:18px;min-width:170px;text-align:center;font-variant-numeric:tabular-nums}
+.scrub{display:flex;gap:3px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.scrub i{width:14px;height:6px;border-radius:3px;background:#D5DAE4}
+.scrub i.on{background:var(--lilac)}
+.hint{text-align:center;color:var(--ink-2);font-size:13px;margin-top:8px}
+.empty{padding:60px 20px;text-align:center;color:var(--ink-2);line-height:1.7}
+.detail-paper{background:#FFFEFA;border-radius:4px;margin-top:12px;box-shadow:0 6px 16px -8px rgba(0,0,0,.3);padding-bottom:4px}
+.detail-paper .receipt{font-size:13.5px}
+
+/* ---------- customize drawer ---------- */
+.drawer{position:absolute;right:0;top:0;bottom:0;width:min(400px,100vw);background:linear-gradient(180deg,#FFFFFF,#F2F5FA);
+  box-shadow:-20px 0 50px -20px rgba(0,0,0,.5);transform:translateX(105%);transition:transform .4s cubic-bezier(.3,1.1,.5,1);display:flex;flex-direction:column}
+.overlay.show .drawer{transform:none}
+#custOv .backdrop{background:rgba(24,27,46,.25);backdrop-filter:none;-webkit-backdrop-filter:none}
+.drawer-h{padding:calc(18px + env(safe-area-inset-top)) 20px 10px;display:flex;align-items:center;gap:10px}
+.drawer-h h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:24px}
+.drawer-h .sp{flex:1}
+.tabs{display:flex;gap:6px;padding:0 20px}
+.tab{flex:1;height:40px;border:0;border-radius:14px;background:#E9EDF4;cursor:pointer;font-family:var(--f-display);font-size:17px}
+.tab[aria-selected="true"]{background:var(--ink);color:#fff}
+.drawer-b{flex:1;overflow:auto;overscroll-behavior:contain;padding:14px 20px calc(28px + env(safe-area-inset-bottom))}
+.sec{margin-bottom:18px}
+.sec h4{margin:0 0 8px;font-family:var(--f-display);font-weight:400;font-size:17px;display:flex;align-items:baseline;gap:8px}
+.sec h4 small{font-family:var(--f-body);font-size:12px;color:var(--ink-2)}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.opt{position:relative;border:2px solid transparent;border-radius:16px;background:#fff;padding:8px 6px 8px;cursor:pointer;display:grid;justify-items:center;gap:4px;
+  box-shadow:0 6px 14px -8px rgba(42,47,69,.4);font-size:13px;transition:transform .15s,border-color .15s}
+.opt:hover{transform:translateY(-2px)}
+.opt[aria-pressed="true"]{border-color:var(--lilac)}
+.opt .sw{width:54px;height:54px;border-radius:14px;display:block}
+.opt .sw.round{border-radius:50%}
+.opt .st{font-size:11.5px;color:var(--ink-2)}
+.opt .st.cost{color:#A06A00;font-weight:700}
+.opt.locked .sw{filter:grayscale(.5) brightness(.95)}
+.opt.confirm{border-color:var(--sun);background:#FFF8E1}
+.opt.cant{animation:shake .4s}
+.name-row{display:flex;gap:8px}
+.name-row input{flex:1;height:42px;border-radius:14px;border:2px solid #E1E6EF;padding:0 12px;font-size:16px}
+.name-row input:focus{outline:none;border-color:var(--lilac)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;
+  opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.on{opacity:1}
+.fly-paper{position:fixed;z-index:70;pointer-events:none;background:#FFFEFA;border-radius:3px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+
+/* ---------- shopping list ---------- */
+.cart-sub{margin:0 20px 10px;color:var(--ink-2);font-size:13.5px;line-height:1.5}
+.cart-add{margin:0 20px;padding:12px;border-radius:18px;background:#fff;box-shadow:0 8px 18px -12px rgba(42,47,69,.45)}
+.cart-add-row{display:grid;grid-template-columns:1fr 92px;gap:8px}
+.cart-add input{width:100%;height:42px;border-radius:12px;border:2px solid #E1E6EF;padding:0 12px;font-size:16px;color:var(--ink);background:#fff}
+.cart-add input:focus{outline:none;border-color:var(--mint)}
+.cart-cats{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin:8px 0 10px}
+.ccat{border:2px solid transparent;border-radius:12px;background:#EEF1F7;padding:3px 0 2px;cursor:pointer;display:grid;justify-items:center;font-size:10.5px;color:var(--ink-2)}
+.ccat svg{width:30px;height:30px}
+.ccat[aria-checked="true"]{background:#fff;border-color:var(--mint);color:var(--ink)}
+.cart-add-btn{width:100%;background:var(--mint);color:#fff;box-shadow:0 5px 0 #1E8A7C}
+.cart-add-btn:active{box-shadow:0 1px 0 #1E8A7C}
+.cart-sum{margin:14px 20px 0;font-size:13.5px;color:var(--ink-2);display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.cart-sum b{color:var(--ink)}
+#cartList{padding-top:8px}
+.crow{display:grid;grid-template-columns:38px 34px minmax(0,1fr) 84px 32px;align-items:center;gap:8px;padding:9px 10px;margin-bottom:8px;border-radius:16px;background:#fff;
+  box-shadow:0 6px 14px -10px rgba(42,47,69,.5);transition:background .2s, opacity .2s}
+.crow.done{background:#EAF7F4}
+.crow.done .cn{text-decoration:line-through;text-decoration-color:rgba(42,47,69,.45);color:var(--ink-2)}
+.cbox{width:34px;height:34px;border-radius:11px;border:2.5px solid #C5CCDA;background:#fff;cursor:pointer;display:grid;place-items:center;padding:0;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.06)}
+.cbox svg{width:20px;height:20px;opacity:0;transform:scale(.4);transition:transform .25s cubic-bezier(.3,1.8,.5,1),opacity .15s}
+.cbox[aria-checked="true"]{background:var(--mint);border-color:#1E9C8C}
+.cbox[aria-checked="true"] svg{opacity:1;transform:none}
+.crow .cic{width:34px;height:34px}
+.cname{font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.cname small{display:block;font-size:11.5px;color:var(--ink-2);text-decoration:none}
+.crow.done .cname small{color:#1E8A7C}
+.cprice{position:relative;display:block}
+.cprice span{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--ink-2);font-size:13px}
+.cprice input{width:100%;height:36px;border-radius:10px;border:2px solid #E1E6EF;padding:0 6px 0 20px;font-size:16px;font-variant-numeric:tabular-nums;color:var(--ink);background:#fff}
+.cprice input:focus{outline:none;border-color:var(--mint)}
+.cprice input:disabled{background:transparent;border-color:transparent;color:var(--ink-2)}
+.cdel{width:30px;height:30px;border-radius:50%;border:0;background:#F2F3F6;color:#9A9FB0;cursor:pointer;font-size:15px;padding:0}
+.cdel.arm{background:#FFE1DC;color:var(--tomato);font-size:12px}
+.cart-empty{padding:18px 6px;color:var(--ink-2);font-size:14px;line-height:1.6;text-align:center}
+.sugg{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
+.sugg button{border:0;border-radius:999px;padding:7px 12px;background:#fff;box-shadow:0 4px 10px -6px rgba(42,47,69,.5);cursor:pointer;font-size:13.5px}
+@media (max-width:380px){ .crow{grid-template-columns:34px 28px minmax(0,1fr) 74px 30px;gap:6px;padding:8px} .crow .cic{width:28px;height:28px} }
+
+/* ---------- phones & tablets ---------- */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{-webkit-tap-highlight-color:transparent}
+.app{padding:max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))}
+button,.stage,.clip-area,.opt,.cat-btn{touch-action:manipulation}
+.stage,.rbtn,.clip-area{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.mtool{display:none}
+body.compact .app{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;align-content:start;gap:12px}
+body.compact .mtool{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;width:100%;max-width:920px}
+body.compact .mtool .btns{display:flex;gap:12px}
+body.compact .badge{top:-4px;right:-4px;min-width:22px;height:22px;line-height:22px;font-size:12px;padding:0 6px}
+body.compact .rbtn,body.compact #btnCust,body.compact #btnCart,body.compact #btnRec,body.compact #btnPay{position:relative;top:auto;left:auto;width:68px;height:68px;font-size:15px;gap:2px;
+  box-shadow:0 6px 0 var(--d),0 14px 18px -8px rgba(42,47,69,.45),inset 0 -6px 12px rgba(0,0,0,.12),inset 0 2px 0 rgba(255,255,255,.6)}
+body.compact .rbtn:active,body.compact .rbtn.pressed{transform:translateY(5px);box-shadow:0 1px 0 var(--d),inset 0 -6px 12px rgba(0,0,0,.12)}
+body.compact .rbtn svg{width:20px;height:20px}
+body.compact .rbtn small{font-size:10px}
+body.compact .hud{position:static;width:auto;flex:1 1 220px}
+body.compact .hud .date{font-size:24px}
+body.compact .hud .today{margin-top:4px}
+body.compact .hud .row{margin-top:8px}
+body.compact .stage-wrap{max-width:920px;border-radius:24px;overflow:hidden;box-shadow:0 24px 50px -28px rgba(42,47,69,.6)}
+body.compact .stage{border-radius:0;box-shadow:none}
+body.compact .mobile-slot{max-width:640px;margin-top:0}
+body.side .app{grid-template-columns:minmax(0,1fr) minmax(300px,380px);grid-template-areas:"tool form" "scene form";grid-template-rows:auto 1fr;align-items:start;justify-items:stretch;column-gap:16px}
+body.side .mtool{grid-area:tool}
+body.side .stage-wrap{grid-area:scene;justify-self:center}
+body.side .mobile-slot{grid-area:form;max-width:none}
+body.side .rbtn,body.side #btnCust,body.side #btnCart,body.side #btnRec,body.side #btnPay{width:58px;height:58px;font-size:13px}
+body.side .hud{flex:1 1 150px}
+body.side .hud .date{font-size:19px}
+body.side .hud .today{font-size:13px}
+body.side .hud .row{margin-top:6px}
+body.side .chip{height:26px;padding:0 9px;font-size:12px}
+body.side .mtool{gap:8px 12px}
+@media (max-width:380px){
+  body.compact .rbtn,body.compact #btnCust,body.compact #btnCart,body.compact #btnRec,body.compact #btnPay{width:60px;height:60px;font-size:14px}
+  body.compact .mtool .btns{gap:9px}
+}
+@media (max-width:480px){
+  .order{padding:16px 14px}
+  .field{grid-template-columns:44px 1fr;gap:8px}
+  .field>label,.field>.lbl{font-size:16px}
+  .cat-grid{gap:6px}
+  .cat-btn{font-size:12.5px}
+  .cat-btn svg{width:40px;height:40px}
+  #orderHint{display:none}
+  .opts{gap:6px}
+  .opt .sw{width:48px;height:48px}
+  .clip-area{height:450px}
+  .board{height:400px}
+}
+@media (max-height:500px){
+  .order{padding:14px 16px}
+  .order h2{margin-bottom:8px}
+  .field{margin-bottom:7px}
+  .cat-btn svg{width:34px;height:34px}
+  .ok-btn{height:46px}
+}
+@media (hover:none){
+  .hot:hover{filter:none}
+  .rbtn:hover{transform:none}
+  .cat-btn:hover svg{transform:none}
+  .opt:hover{transform:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<!-- shared graphics: gradients, 3D clay icons, printer -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="g-bun" cx=".38" cy=".3" r=".85"><stop offset="0" stop-color="#FFE3AE"/><stop offset=".5" stop-color="#F2A94E"/><stop offset="1" stop-color="#C2701F"/></radialGradient>
+    <linearGradient id="g-bunb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EDA14C"/><stop offset="1" stop-color="#B0611F"/></linearGradient>
+    <linearGradient id="g-patty" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#93522E"/><stop offset="1" stop-color="#4E2715"/></linearGradient>
+    <linearGradient id="g-cheese" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#F2AE00"/></linearGradient>
+    <linearGradient id="g-lettuce" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B2EE72"/><stop offset="1" stop-color="#46A037"/></linearGradient>
+    <linearGradient id="g-cup" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#CBD3E3"/><stop offset=".33" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#E7ECF4"/><stop offset="1" stop-color="#A4AEC4"/></linearGradient>
+    <linearGradient id="g-lid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFA596"/><stop offset="1" stop-color="#DE4538"/></linearGradient>
+    <linearGradient id="g-sleeve" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#17897B"/><stop offset=".35" stop-color="#4CD6C3"/><stop offset=".62" stop-color="#2FB8A6"/><stop offset="1" stop-color="#147568"/></linearGradient>
+    <linearGradient id="g-bag" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E2A855"/><stop offset=".35" stop-color="#FFDDA0"/><stop offset=".7" stop-color="#F2B866"/><stop offset="1" stop-color="#C98A36"/></linearGradient>
+    <linearGradient id="g-bus" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E29B00"/><stop offset=".33" stop-color="#FFE485"/><stop offset=".66" stop-color="#FFC93C"/><stop offset="1" stop-color="#D48F00"/></linearGradient>
+    <linearGradient id="g-glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E6F9FF"/><stop offset="1" stop-color="#83C8E6"/></linearGradient>
+    <radialGradient id="g-ctrl" cx=".35" cy=".28" r=".85"><stop offset="0" stop-color="#C2B8FF"/><stop offset=".5" stop-color="#8E7CF0"/><stop offset="1" stop-color="#523CC0"/></radialGradient>
+    <linearGradient id="g-bottle" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#16897B"/><stop offset=".33" stop-color="#7AE6D6"/><stop offset=".66" stop-color="#3CC3B1"/><stop offset="1" stop-color="#147568"/></linearGradient>
+    <linearGradient id="g-chrome" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C3CCDA"/><stop offset=".4" stop-color="#FFFFFF"/><stop offset="1" stop-color="#909CB1"/></linearGradient>
+    <linearGradient id="g-bookR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF907F"/><stop offset="1" stop-color="#CF3E32"/></linearGradient>
+    <linearGradient id="g-bookB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#86ABFF"/><stop offset="1" stop-color="#3A60CF"/></linearGradient>
+    <linearGradient id="g-bookG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#95E6A6"/><stop offset="1" stop-color="#2A9C53"/></linearGradient>
+    <linearGradient id="g-pages" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E9E2D2"/></linearGradient>
+    <radialGradient id="g-gift" cx=".35" cy=".28" r=".9"><stop offset="0" stop-color="#FFC8D8"/><stop offset=".5" stop-color="#FF7FA6"/><stop offset="1" stop-color="#C93A64"/></radialGradient>
+    <linearGradient id="g-ribbon" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F2B000"/><stop offset=".4" stop-color="#FFF0A0"/><stop offset="1" stop-color="#E6A400"/></linearGradient>
+    <radialGradient id="g-shadow"><stop offset="0" stop-color="#2A2F45" stop-opacity=".38"/><stop offset="1" stop-color="#2A2F45" stop-opacity="0"/></radialGradient>
+    <linearGradient id="g-gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="g-cyl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".4" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+    <radialGradient id="g-sphere" cx=".36" cy=".3" r=".78"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#6E321E" stop-opacity=".22"/></radialGradient>
+    <linearGradient id="g-pr-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7E8594"/><stop offset=".5" stop-color="#4A505D"/><stop offset="1" stop-color="#343842"/></linearGradient>
+    <radialGradient id="g-pr-top" cx=".4" cy=".2" r=".95"><stop offset="0" stop-color="#A0A7B4"/><stop offset=".6" stop-color="#5A606D"/><stop offset="1" stop-color="#3B404B"/></radialGradient>
+    <linearGradient id="g-pr-front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A505C"/><stop offset="1" stop-color="#272A32"/></linearGradient>
+    <linearGradient id="g-gun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#626A7D"/><stop offset="1" stop-color="#22262F"/></linearGradient>
+    <linearGradient id="g-screen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D4FCF5"/><stop offset="1" stop-color="#80D8CA"/></linearGradient>
+    <radialGradient id="g-glow"><stop offset="0" stop-color="#FFE28C" stop-opacity=".55"/><stop offset="1" stop-color="#FFE28C" stop-opacity="0"/></radialGradient>
+    <linearGradient id="g-wallshade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".13"/></linearGradient>
+    <linearGradient id="g-floorshade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".16"/><stop offset=".45" stop-color="#000" stop-opacity="0"/></linearGradient>
+    <linearGradient id="g-sideshade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+    <linearGradient id="g-ctopshade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".07"/><stop offset="1" stop-color="#fff" stop-opacity=".35"/></linearGradient>
+    <linearGradient id="g-cfrontshade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset=".25" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".25"/></linearGradient>
+    <linearGradient id="g-leaf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#98E886"/><stop offset="1" stop-color="#2A9452"/></linearGradient>
+    <radialGradient id="g-cat" cx=".38" cy=".3" r=".85"><stop offset="0" stop-color="#FFD09A"/><stop offset=".55" stop-color="#F2A65A"/><stop offset="1" stop-color="#C2702A"/></radialGradient>
+    <linearGradient id="g-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFEB99"/><stop offset="1" stop-color="#DDA200"/></linearGradient>
+    <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7FCBFF"/><stop offset="1" stop-color="#E6F7FF"/></linearGradient>
+    <linearGradient id="g-night" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151A45"/><stop offset="1" stop-color="#3E3C7E"/></linearGradient>
+    <linearGradient id="g-space" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0E0B26"/><stop offset="1" stop-color="#33205F"/></linearGradient>
+    <radialGradient id="g-planet" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#FFD3A8"/><stop offset=".6" stop-color="#F08A5D"/><stop offset="1" stop-color="#9C3F45"/></radialGradient>
+    <radialGradient id="g-lantern" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#FFB38A"/><stop offset=".6" stop-color="#E8392F"/><stop offset="1" stop-color="#9E1F1C"/></radialGradient>
+    <pattern id="pat-stripe" width="28" height="10" patternUnits="userSpaceOnUse"><rect width="12" height="10" fill="#fff" opacity=".35"/></pattern>
+    <pattern id="pat-brick" width="44" height="22" patternUnits="userSpaceOnUse"><path d="M0 0.5H44M0 11.5H44M11 0V11M33 11V22" stroke="#000" stroke-opacity=".08" stroke-width="2" fill="none"/></pattern>
+    <pattern id="pat-panel" width="36" height="10" patternUnits="userSpaceOnUse"><rect x="0" width="2" height="10" fill="#000" opacity=".06"/></pattern>
+    <pattern id="pat-dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="5" cy="5" r="2" fill="#fff" opacity=".12"/><circle cx="16" cy="16" r="1.4" fill="#FFC94D" opacity=".2"/></pattern>
+    <pattern id="pat-grid" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M0 0.5H30M0.5 0V30" stroke="#5B6B8C" stroke-opacity=".18" stroke-width="1.5" fill="none"/><circle cx="4" cy="4" r="1.6" fill="#5B6B8C" opacity=".35"/></pattern>
+    <pattern id="pat-win" width="8" height="10" patternUnits="userSpaceOnUse"><rect x="2" y="3" width="3" height="4" fill="#fff" opacity=".65"/></pattern>
+    <pattern id="pat-winlit" width="8" height="10" patternUnits="userSpaceOnUse"><rect x="2" y="3" width="3" height="4" fill="#FFD66B" opacity=".9"/></pattern>
+    <filter id="neon" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+
+  <!-- 餐食 -->
+  <symbol id="ic-food" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="91" rx="38" ry="6" fill="url(#g-shadow)"/>
+    <path d="M14 70 Q14 87 50 87 Q86 87 86 70 Z" fill="url(#g-bunb)"/>
+    <rect x="11" y="60" width="78" height="13" rx="6.5" fill="url(#g-patty)"/>
+    <path d="M13 59 L87 59 L82 68 L74 62 L64 71 L55 62 L44 70 L34 62 L24 69 L17 63 Z" fill="url(#g-cheese)"/>
+    <path d="M9 58 q6 -7 12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t11 0 v4 h-81z" fill="url(#g-lettuce)"/>
+    <path d="M12 57 Q11 21 50 21 Q89 21 88 57 Z" fill="url(#g-bun)"/>
+    <g fill="#FFF6DD"><ellipse cx="36" cy="33" rx="3" ry="1.8" transform="rotate(-20 36 33)"/><ellipse cx="52" cy="29" rx="3" ry="1.8"/><ellipse cx="66" cy="36" rx="3" ry="1.8" transform="rotate(25 66 36)"/><ellipse cx="44" cy="44" rx="3" ry="1.8" transform="rotate(10 44 44)"/><ellipse cx="60" cy="47" rx="3" ry="1.8" transform="rotate(-15 60 47)"/></g>
+    <ellipse cx="34" cy="31" rx="12" ry="6" fill="#fff" opacity=".35" transform="rotate(-20 34 31)"/>
+  </symbol>
+  <!-- 飲料 -->
+  <symbol id="ic-drink" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="92" rx="26" ry="5" fill="url(#g-shadow)"/>
+    <path d="M56 26 L64 3 L70 5 L62 28 Z" fill="#FF6B6B"/>
+    <path d="M58.6 18.5 L65.2 20.6 L64 24 L57.4 22Z M61.4 10.4 L68 12.5 L66.8 15.9 L60.2 13.8Z" fill="#fff"/>
+    <path d="M27 33 L73 33 L67 87 Q50 92 33 87 Z" fill="url(#g-cup)"/>
+    <path d="M30.3 52 L69.7 52 L68 68 L32 68 Z" fill="url(#g-sleeve)"/>
+    <circle cx="50" cy="60" r="5" fill="#fff" opacity=".85"/>
+    <g fill="#5A3A28" opacity=".85"><circle cx="40" cy="82" r="3"/><circle cx="47" cy="84" r="3"/><circle cx="55" cy="83" r="3"/><circle cx="61" cy="80" r="2.6"/><circle cx="44" cy="78" r="2.6"/><circle cx="52" cy="78" r="2.6"/></g>
+    <path d="M23 34 Q25 21 50 21 Q75 21 77 34 Z" fill="url(#g-lid)"/>
+    <rect x="21" y="32" width="58" height="6" rx="3" fill="#E85A4C"/>
+    <path d="M33 40 L36 84" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".6"/>
+  </symbol>
+  <!-- 購物 -->
+  <symbol id="ic-shop" viewBox="0 0 100 100">
+    <ellipse cx="52" cy="92" rx="38" ry="5.5" fill="url(#g-shadow)"/>
+    <path d="M36 38 Q35 12 50 12 Q65 12 64 38" fill="none" stroke="#8A5A22" stroke-width="5" stroke-linecap="round"/>
+    <path d="M78 34 L89 41 L90 83 L82 88 Z" fill="#B27631"/>
+    <path d="M21 34 L78 34 L82 88 L17 88 Z" fill="url(#g-bag)"/>
+    <path d="M21 34 L78 34 L78.6 41 L20.4 41 Z" fill="#000" opacity=".08"/>
+    <circle cx="50" cy="62" r="11" fill="#F0614F"/>
+    <path d="M50 67 l-5 -5 a3 3 0 0 1 5 -3.5 a3 3 0 0 1 5 3.5 z" fill="#fff"/>
+    <circle cx="36" cy="40" r="2.5" fill="#6B4416"/><circle cx="64" cy="40" r="2.5" fill="#6B4416"/>
+    <path d="M26 46 L24 82" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".5"/>
+  </symbol>
+  <!-- 交通 -->
+  <symbol id="ic-trans" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="92" rx="36" ry="5.5" fill="url(#g-shadow)"/>
+    <rect x="22" y="78" width="14" height="12" rx="4" fill="#2A2F45"/><rect x="64" y="78" width="14" height="12" rx="4" fill="#2A2F45"/>
+    <rect x="15" y="14" width="70" height="70" rx="14" fill="url(#g-bus)"/>
+    <rect x="33" y="18" width="34" height="7" rx="3" fill="#2A2F45"/>
+    <rect x="35" y="19.5" width="18" height="4" rx="1.5" fill="#6FE3FF"/>
+    <rect x="22" y="29" width="56" height="27" rx="7" fill="url(#g-glass)"/>
+    <path d="M24 31 L44 31 L32 54 L24 54Z" fill="#fff" opacity=".5"/>
+    <rect x="17" y="66" width="66" height="11" rx="5.5" fill="#4A5060"/>
+    <circle cx="28" cy="63" r="5.5" fill="#FFF7C8"/><circle cx="72" cy="63" r="5.5" fill="#FFF7C8"/>
+    <rect x="42" y="61" width="16" height="4" rx="2" fill="#C98A00"/>
+    <path d="M19 26 Q22 17 34 16" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>
+  </symbol>
+  <!-- 娛樂 -->
+  <symbol id="ic-fun" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="90" rx="38" ry="5.5" fill="url(#g-shadow)"/>
+    <path d="M20 38 Q30 30 50 32 Q70 30 80 38 Q93 56 89 76 Q85 87 74 81 L64 69 L36 69 L26 81 Q15 87 11 76 Q7 56 20 38Z" fill="url(#g-ctrl)"/>
+    <rect x="22" y="48" width="18" height="6" rx="2" fill="#2A2F45"/><rect x="28" y="42" width="6" height="18" rx="2" fill="#2A2F45"/>
+    <circle cx="67" cy="45" r="4.5" fill="#FFC94D"/><circle cx="75" cy="53" r="4.5" fill="#FF6B6B"/><circle cx="59" cy="53" r="4.5" fill="#4CD6C3"/><circle cx="67" cy="61" r="4.5" fill="#7CCBE8"/>
+    <rect x="44" y="44" width="5" height="3" rx="1.5" fill="#3B2C9A"/><rect x="51" y="44" width="5" height="3" rx="1.5" fill="#3B2C9A"/>
+    <path d="M26 38 Q38 33 48 34" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" opacity=".55"/>
+  </symbol>
+  <!-- 日用 -->
+  <symbol id="ic-daily" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="92" rx="26" ry="5" fill="url(#g-shadow)"/>
+    <rect x="40" y="14" width="26" height="8" rx="4" fill="url(#g-chrome)"/>
+    <rect x="62" y="15.5" width="15" height="5" rx="2.5" fill="url(#g-chrome)"/>
+    <rect x="44" y="21" width="10" height="10" fill="#C3CCDA"/>
+    <rect x="40" y="28" width="20" height="10" rx="3" fill="url(#g-chrome)"/>
+    <rect x="28" y="36" width="44" height="54" rx="12" fill="url(#g-bottle)"/>
+    <rect x="33" y="52" width="34" height="24" rx="6" fill="#fff" opacity=".9"/>
+    <circle cx="44" cy="62" r="4" fill="#7CCBE8"/><circle cx="53" cy="66" r="3" fill="#B6E6F5"/><circle cx="56" cy="58" r="2.4" fill="#7CCBE8"/>
+    <path d="M34 42 L34 84" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".45"/>
+  </symbol>
+  <!-- 學習 -->
+  <symbol id="ic-study" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="92" rx="38" ry="5.5" fill="url(#g-shadow)"/>
+    <rect x="15" y="70" width="70" height="17" rx="3.5" fill="url(#g-bookR)"/>
+    <rect x="19" y="73" width="64" height="11" rx="2" fill="url(#g-pages)"/>
+    <rect x="15" y="70" width="8" height="17" rx="3" fill="#B8352B"/>
+    <g transform="rotate(-4 50 62)"><rect x="20" y="53" width="62" height="17" rx="3.5" fill="url(#g-bookB)"/><rect x="24" y="56" width="56" height="11" rx="2" fill="url(#g-pages)"/><rect x="20" y="53" width="8" height="17" rx="3" fill="#2F50B0"/></g>
+    <g transform="rotate(3 50 45)"><rect x="17" y="37" width="62" height="17" rx="3.5" fill="url(#g-bookG)"/><rect x="21" y="40" width="56" height="11" rx="2" fill="url(#g-pages)"/><rect x="17" y="37" width="8" height="17" rx="3" fill="#23824A"/></g>
+    <circle cx="62" cy="27" r="10" fill="#F0614F"/><path d="M62 17 Q64 11 69 10" stroke="#5A3A28" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="70" cy="13" rx="5" ry="2.6" fill="#6FCF6A" transform="rotate(-25 70 13)"/>
+    <ellipse cx="58" cy="23" rx="3.5" ry="2.4" fill="#fff" opacity=".55"/>
+  </symbol>
+  <!-- 其他 -->
+  <symbol id="ic-other" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="91" rx="36" ry="5.5" fill="url(#g-shadow)"/>
+    <rect x="20" y="46" width="60" height="42" rx="7" fill="url(#g-gift)"/>
+    <rect x="15" y="35" width="70" height="15" rx="6" fill="url(#g-gift)"/>
+    <rect x="15" y="47" width="70" height="4" fill="#000" opacity=".1"/>
+    <rect x="45" y="35" width="10" height="53" fill="url(#g-ribbon)"/>
+    <path d="M50 36 Q34 18 28 28 Q24 38 50 37Z" fill="url(#g-ribbon)"/>
+    <path d="M50 36 Q66 18 72 28 Q76 38 50 37Z" fill="url(#g-ribbon)"/>
+    <circle cx="50" cy="36" r="5" fill="#F5B400"/>
+    <path d="M25 54 L25 82" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".45"/>
+  </symbol>
+
+  <!-- receipt printer -->
+  <symbol id="printerSym" viewBox="0 0 240 180">
+    <ellipse cx="120" cy="171" rx="114" ry="9" fill="url(#g-shadow)"/>
+    <rect x="26" y="160" width="26" height="12" rx="4" fill="#22252C"/><rect x="188" y="160" width="26" height="12" rx="4" fill="#22252C"/>
+    <path d="M18 84 Q18 70 32 70 L208 70 Q222 70 222 84 L224 156 Q224 168 212 168 L28 168 Q16 168 16 156 Z" fill="url(#g-pr-body)"/>
+    <path d="M16 118 L224 118 L224 156 Q224 168 212 168 L28 168 Q16 168 16 156 Z" fill="url(#g-pr-front)"/>
+    <path d="M22 84 Q22 74 32 74 L208 74 Q218 74 218 84" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="2"/>
+    <path d="M48 70 Q50 24 120 22 Q190 24 192 70 Z" fill="url(#g-pr-top)"/>
+    <path d="M62 54 Q68 32 120 29" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="3" stroke-linecap="round"/>
+    <rect x="60" y="57" width="120" height="9" rx="4" fill="#111317"/>
+    <rect x="60" y="55" width="120" height="3" rx="1.5" fill="#fff" opacity=".22"/>
+    <rect x="56" y="70" width="128" height="7" fill="#23262D"/>
+    <line x1="58" y1="78" x2="182" y2="78" stroke="#59606C" stroke-width="2" stroke-dasharray="3 3"/>
+    <rect x="32" y="128" width="74" height="26" rx="4" fill="#5E8C9C" opacity=".55"/>
+    <rect x="38" y="134" width="44" height="3" rx="1.5" fill="#D6EEF5" opacity=".7"/>
+    <rect x="38" y="140" width="56" height="3" rx="1.5" fill="#D6EEF5" opacity=".55"/>
+    <rect x="38" y="146" width="34" height="3" rx="1.5" fill="#D6EEF5" opacity=".55"/>
+    <rect x="146" y="132" width="62" height="16" rx="5" fill="#15202C"/>
+    <circle class="led1" cx="158" cy="140" r="3.4" fill="#6FE3FF"/>
+    <circle class="led2" cx="171" cy="140" r="3.4" fill="#6FE3FF"/>
+    <circle class="led3" cx="196" cy="140" r="3.4" fill="#FFC94D"/>
+    <path d="M20 122 L220 122" stroke="#fff" stroke-opacity=".12" stroke-width="2"/>
+  </symbol>
+</svg>
+
+<div class="app">
+  <div class="mtool" id="mtool"><div class="btns" id="mtoolBtns"></div></div>
+  <div class="stage-wrap" id="stageWrap">
+    <div class="stage" id="stage">
+
+      <button class="rbtn" id="btnCust" aria-label="自訂商店與收銀員">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7.2" r="1.2" fill="currentColor"/><circle cx="15" cy="7.6" r="1.2" fill="currentColor"/></svg>
+        自訂
+      </button>
+      <button class="rbtn" id="btnCart" aria-label="購物清單">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2.2l2.3 10.1a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 8H6.3"/><circle cx="9.5" cy="19" r="1.5"/><circle cx="16.5" cy="19" r="1.5"/></svg>
+        購物車
+        <span class="badge" id="cartBadge" hidden>0</span>
+      </button>
+      <button class="rbtn" id="btnRec" aria-label="查看紀錄">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8v4H8z"/><path d="M6 7h12v14H6z"/><path d="M9 12h6M9 16h4"/></svg>
+        <span>查看<br>紀錄</span>
+      </button>
+      <button class="rbtn" id="btnPay" aria-label="每日結帳">
+        <small>每日</small>
+        結帳
+      </button>
+
+      <div class="hud">
+        <div class="date" id="hudDate">—</div>
+        <div class="today" id="hudToday">今日還沒有記帳</div>
+        <div class="row">
+          <span class="chip" id="syncChip"><span class="dot"></span><span id="syncText">本機儲存</span></span>
+          <button class="chip" id="muteBtn" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path id="muteWave" d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>
+            <span id="muteText">音效開</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- store diorama -->
+      <div class="store-shadow" aria-hidden="true"></div>
+      <svg id="store" viewBox="0 0 660 500" role="img" aria-label="可以互動的商店場景">
+        <defs>
+          <clipPath id="roomClip"><rect x="0" y="0" width="660" height="500" rx="24"/></clipPath>
+          <clipPath id="floorClip"><polygon points="0,392 70,340 660,340 660,500 0,500"/></clipPath>
+          <clipPath id="winClip"><rect x="108" y="98" width="134" height="104" rx="6"/></clipPath>
+        </defs>
+        <g clip-path="url(#roomClip)">
+          <rect class="s-wall" x="0" y="0" width="660" height="340"/>
+          <rect id="wallPat" x="0" y="0" width="660" height="340" fill="url(#pat-stripe)"/>
+          <rect class="s-wain" x="0" y="282" width="660" height="58"/>
+          <rect x="0" y="282" width="660" height="5" fill="#fff" opacity=".35"/>
+          <rect x="0" y="296" width="660" height="44" fill="url(#g-wallshade)"/>
+          <polygon class="s-floor" points="0,392 70,340 660,340 660,500 0,500"/>
+          <g id="floorLines" clip-path="url(#floorClip)" stroke="#2A2F45" stroke-opacity=".08" stroke-width="2"></g>
+          <polygon points="0,392 70,340 660,340 660,500 0,500" fill="url(#g-floorshade)"/>
+          <polygon class="s-side" points="0,0 70,30 70,340 0,392"/>
+          <polygon points="0,0 70,30 70,340 0,392" fill="url(#g-sideshade)"/>
+          <polygon class="s-ceil" points="0,0 660,0 660,30 70,30"/>
+          <line x1="70" y1="30" x2="70" y2="340" stroke="#000" stroke-opacity=".08" stroke-width="2"/>
+          <line x1="70" y1="30" x2="660" y2="30" stroke="#000" stroke-opacity=".08" stroke-width="2"/>
+          <g id="extras"></g>
+
+          <!-- sign -->
+          <g id="sign" class="hot" data-act="sign">
+            <line x1="118" y1="30" x2="118" y2="42" stroke="#555B6B" stroke-width="2"/>
+            <line x1="232" y1="30" x2="232" y2="42" stroke="#555B6B" stroke-width="2"/>
+            <rect x="95" y="38" width="160" height="44" rx="12" fill="#000" opacity=".15" transform="translate(0 4)"/>
+            <rect class="s-sign" x="95" y="38" width="160" height="44" rx="12"/>
+            <rect x="101" y="42" width="148" height="10" rx="5" fill="#fff" opacity=".18"/>
+            <text id="signText" class="s-signText" x="175" y="68" text-anchor="middle" font-size="22">天天記帳舖</text>
+          </g>
+
+          <!-- window -->
+          <g id="win" class="hot" data-act="window">
+            <rect x="98" y="92" width="154" height="124" rx="12" fill="#000" opacity=".12"/>
+            <rect class="s-trim" x="98" y="88" width="154" height="124" rx="12"/>
+            <g clip-path="url(#winClip)">
+              <g id="viewDay">
+                <rect x="108" y="98" width="134" height="104" fill="url(#g-sky)"/>
+                <circle cx="214" cy="122" r="16" fill="#FFE27A" opacity=".35"/><circle cx="214" cy="122" r="11" fill="#FFE27A"/>
+                <g fill="#fff" opacity=".95"><ellipse cx="138" cy="120" rx="16" ry="7"/><ellipse cx="150" cy="115" rx="11" ry="8"/><ellipse cx="190" cy="140" rx="12" ry="5"/></g>
+                <rect x="110" y="152" width="22" height="50" fill="#A6C4E8"/><rect x="110" y="152" width="22" height="50" fill="url(#pat-win)"/>
+                <rect x="134" y="138" width="26" height="64" fill="#8BAEDC"/><rect x="134" y="138" width="26" height="64" fill="url(#pat-win)"/>
+                <rect x="162" y="160" width="18" height="42" fill="#B6D2EF"/>
+                <rect x="182" y="146" width="24" height="56" fill="#97B9E2"/><rect x="182" y="146" width="24" height="56" fill="url(#pat-win)"/>
+                <rect x="208" y="162" width="34" height="40" fill="#ACC9EA"/><rect x="208" y="162" width="34" height="40" fill="url(#pat-win)"/>
+              </g>
+              <g id="viewNight" style="display:none">
+                <rect x="108" y="98" width="134" height="104" fill="url(#g-night)"/>
+                <circle cx="212" cy="122" r="12" fill="#FFF3C4"/><circle cx="218" cy="118" r="11" fill="#1E2352"/>
+                <g fill="#fff"><circle cx="128" cy="112" r="1.3"/><circle cx="160" cy="106" r="1"/><circle cx="182" cy="124" r="1.4"/><circle cx="146" cy="130" r="1"/><circle cx="234" cy="140" r="1.1"/></g>
+                <rect x="110" y="152" width="22" height="50" fill="#2B2F5E"/><rect x="110" y="152" width="22" height="50" fill="url(#pat-winlit)"/>
+                <rect x="134" y="138" width="26" height="64" fill="#232756"/><rect x="134" y="138" width="26" height="64" fill="url(#pat-winlit)"/>
+                <rect x="162" y="160" width="18" height="42" fill="#2E3366"/>
+                <rect x="182" y="146" width="24" height="56" fill="#262A5C"/><rect x="182" y="146" width="24" height="56" fill="url(#pat-winlit)"/>
+                <rect x="208" y="162" width="34" height="40" fill="#2B2F63"/><rect x="208" y="162" width="34" height="40" fill="url(#pat-winlit)"/>
+              </g>
+              <g id="viewSpace" style="display:none">
+                <rect x="108" y="98" width="134" height="104" fill="url(#g-space)"/>
+                <g fill="#fff"><circle cx="120" cy="110" r="1.2"/><circle cx="150" cy="104" r="1"/><circle cx="230" cy="112" r="1.4"/><circle cx="136" cy="170" r="1"/><circle cx="226" cy="186" r="1.2"/><circle cx="170" cy="190" r="1"/><circle cx="118" cy="140" r="1.1"/></g>
+                <ellipse cx="180" cy="152" rx="44" ry="10" fill="none" stroke="#FFE0A8" stroke-width="3" opacity=".8" transform="rotate(-14 180 152)"/>
+                <circle cx="180" cy="152" r="26" fill="url(#g-planet)"/>
+                <path d="M140 162 Q180 140 220 142" fill="none" stroke="#FFE0A8" stroke-width="3" opacity=".85" transform="rotate(-6 180 152)"/>
+                <circle cx="226" cy="118" r="6" fill="#B9C4FF"/>
+              </g>
+              <path d="M108 98 L160 98 L118 202 L108 202Z" fill="#fff" opacity=".18"/>
+            </g>
+            <rect class="s-trim" x="172" y="98" width="6" height="104"/>
+            <rect class="s-trim" x="108" y="147" width="134" height="6"/>
+            <rect class="s-trim" x="90" y="206" width="170" height="11" rx="5.5"/>
+            <rect x="90" y="206" width="170" height="3" rx="1.5" fill="#fff" opacity=".35"/>
+          </g>
+
+          <!-- cat on sill -->
+          <g id="cat" class="hot" data-act="cat">
+            <ellipse cx="200" cy="208" rx="34" ry="4" fill="#000" opacity=".12"/>
+            <path id="catTail" d="M226 200 Q246 198 240 182 Q237 175 231 180" fill="none" stroke="#E08D3E" stroke-width="7" stroke-linecap="round"/>
+            <ellipse cx="203" cy="194" rx="27" ry="13" fill="url(#g-cat)"/>
+            <path d="M198 182 q4 6 0 12 M208 182 q4 6 0 12 M218 185 q3 5 0 9" stroke="#D27A30" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <circle cx="178" cy="193" r="12.5" fill="url(#g-cat)"/>
+            <path d="M168 186 L168 173 L177 181Z M180 180 L189 172 L190 185Z" fill="#F2A65A"/>
+            <path d="M170 184 L170 177 L175 181Z" fill="#FFC2C2"/>
+            <path d="M171 194 q3 2 6 0 M181 194 q3 2 6 0" stroke="#5A3418" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+            <ellipse cx="179" cy="198" rx="1.6" ry="1.1" fill="#C25A5A"/>
+            <text id="zzz" x="150" y="174" font-size="13" fill="#7B5CFF">z z</text>
+          </g>
+
+          <!-- clock -->
+          <g id="clock" class="hot" data-act="clock">
+            <circle cx="292" cy="176" r="27" fill="#000" opacity=".1"/>
+            <circle cx="290" cy="172" r="26" fill="#fff" class="s-trimStroke" stroke-width="5"/>
+            <g id="ticks" stroke="#2A2F45" stroke-width="2" stroke-linecap="round"></g>
+            <line id="hHand" x1="290" y1="172" x2="290" y2="159" stroke="#2A2F45" stroke-width="3.5" stroke-linecap="round"/>
+            <line id="mHand" x1="290" y1="172" x2="290" y2="153" stroke="#F0614F" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="290" cy="172" r="3" fill="#2A2F45"/>
+          </g>
+
+          <!-- shelves -->
+          <g id="shelves">
+            <rect x="528" y="70" width="124" height="230" fill="#000" opacity=".07"/>
+            <rect class="s-shelf" x="528" y="70" width="7" height="230"/>
+            <rect class="s-shelf" x="645" y="70" width="7" height="230"/>
+            <g id="goods"></g>
+            <rect class="s-shelf" x="524" y="66" width="132" height="9" rx="2"/>
+            <rect class="s-shelf" x="524" y="140" width="132" height="9" rx="2"/>
+            <rect class="s-shelf" x="524" y="210" width="132" height="9" rx="2"/>
+            <rect class="s-shelf" x="524" y="280" width="132" height="9" rx="2"/>
+            <g fill="#000" opacity=".12"><rect x="524" y="72" width="132" height="3"/><rect x="524" y="146" width="132" height="3"/><rect x="524" y="216" width="132" height="3"/><rect x="524" y="286" width="132" height="3"/></g>
+          </g>
+
+          <!-- lamp -->
+          <g id="lamp" class="hot" data-act="lamp">
+            <line x1="360" y1="30" x2="360" y2="92" stroke="#3A3F52" stroke-width="2.5"/>
+            <path class="s-lamp" d="M328 124 Q330 96 360 92 Q390 96 392 124 Z"/>
+            <path d="M328 124 Q330 96 360 92 Q390 96 392 124 Z" fill="url(#g-cyl)"/>
+            <path d="M336 116 Q340 102 356 98" stroke="#fff" stroke-opacity=".5" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <ellipse id="bulb" cx="360" cy="125" rx="11" ry="5" fill="#FFF7D1"/>
+          </g>
+
+          <!-- cashier -->
+          <g id="cashierWrap" class="hot" data-act="cashier" transform="translate(470 0)" tabindex="0" role="button" aria-label="和店員互動"><g id="cashier"></g></g>
+
+          <!-- counter -->
+          <polygon class="s-ctop" points="96,318 560,318 572,356 84,356"/>
+          <polygon points="96,318 560,318 572,356 84,356" fill="url(#g-ctopshade)"/>
+          <rect class="s-cfront" x="84" y="356" width="488" height="144"/>
+          <rect class="s-cstripe" x="84" y="370" width="488" height="9"/>
+          <g fill="#000" opacity=".08"><rect x="104" y="392" width="142" height="86" rx="12"/><rect x="262" y="392" width="142" height="86" rx="12"/><rect x="420" y="392" width="136" height="86" rx="12"/></g>
+          <rect x="84" y="356" width="488" height="144" fill="url(#g-cfrontshade)"/>
+          <rect x="84" y="355" width="488" height="3" fill="#fff" opacity=".5"/>
+
+          <!-- POS monitor -->
+          <g id="monitor">
+            <rect x="344" y="296" width="20" height="26" fill="#3A3F52"/>
+            <ellipse cx="354" cy="324" rx="34" ry="7" fill="#2A2F45"/>
+            <rect x="286" y="216" width="136" height="86" rx="12" fill="#2A2F45"/>
+            <rect x="286" y="216" width="136" height="86" rx="12" fill="url(#g-cyl)" opacity=".7"/>
+            <rect x="294" y="224" width="120" height="68" rx="7" fill="url(#g-screen)"/>
+            <path d="M294 224 L350 224 L314 292 L294 292Z" fill="#fff" opacity=".22"/>
+            <text id="mon1" x="354" y="250" text-anchor="middle" font-size="14" fill="#1B5A52">今日 0 筆</text>
+            <text id="mon2" x="354" y="279" text-anchor="middle" font-size="22" fill="#0F3D37">NT$ 0</text>
+          </g>
+
+          <!-- printer -->
+          <g id="printerSpot" class="hot" data-act="printer"></g>
+
+          <!-- plant -->
+          <g id="plant" class="hot" data-act="plant">
+            <ellipse cx="50" cy="486" rx="40" ry="7" fill="#000" opacity=".15"/>
+            <g fill="url(#g-leaf)">
+              <path d="M50 430 Q16 384 22 318 Q56 372 50 430Z"/>
+              <path d="M50 430 Q72 368 66 296 Q90 364 50 430Z"/>
+              <path d="M50 430 Q4 404 -4 352 Q38 380 50 430Z"/>
+              <path d="M50 430 Q102 402 100 344 Q72 384 50 430Z"/>
+              <path d="M50 430 Q38 360 48 282 Q66 360 50 430Z"/>
+            </g>
+            <g stroke="#fff" stroke-opacity=".3" stroke-width="2" fill="none" stroke-linecap="round"><path d="M48 420 Q34 380 26 330"/><path d="M52 420 Q66 370 66 310"/><path d="M50 420 Q48 360 48 296"/></g>
+            <path d="M18 422 L82 422 L76 482 Q50 490 24 482Z" fill="url(#g-bottle)"/>
+            <rect x="14" y="414" width="72" height="13" rx="6.5" fill="#E9EEF5"/>
+            <rect x="14" y="414" width="72" height="4" rx="2" fill="#fff"/>
+          </g>
+
+          <!-- light -->
+          <rect id="dim" x="0" y="0" width="660" height="500" fill="#0B1030" opacity="0" pointer-events="none" style="transition:opacity .5s"/>
+          <circle id="glow" cx="360" cy="180" r="200" fill="url(#g-glow)" pointer-events="none" style="transition:opacity .5s"/>
+        </g>
+        <rect x="3" y="3" width="654" height="494" rx="22" fill="none" stroke="#2A2F45" stroke-width="6"/>
+      </svg>
+
+      <!-- conveyor -->
+      <div class="belt" aria-hidden="true">
+        <div class="belt-leg" style="left:70px"></div>
+        <div class="belt-leg" style="left:540px"></div>
+        <div class="belt-top" id="beltTop"></div>
+        <div class="belt-front"></div>
+        <div class="belt-roller"></div>
+      </div>
+
+      <svg class="fx" viewBox="0 0 1200 720" aria-hidden="true">
+        <polygon id="beam" points="0,0 0,0 0,0" fill="#FF3B4E" opacity="0"/>
+        <line id="scanline" x1="0" y1="0" x2="0" y2="0" stroke="#FF2E44" stroke-width="3" stroke-linecap="round" opacity="0"/>
+      </svg>
+
+      <div class="bubble" id="bubble" aria-live="polite"></div>
+
+      <form class="order" id="order" autocomplete="off">
+        <h2>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>
+          記一筆
+          <small id="orderHint">選種類、填金額，按確定</small>
+        </h2>
+        <div class="field">
+          <label for="fName">項目</label>
+          <input id="fName" maxlength="20" placeholder="雞腿便當">
+        </div>
+        <div class="field">
+          <span class="lbl" id="catLbl">種類</span>
+          <div class="cat-grid" id="catGrid" role="radiogroup" aria-labelledby="catLbl"></div>
+        </div>
+        <div class="field">
+          <label for="fPrice">價格</label>
+          <div class="price"><span>NT$</span><input id="fPrice" type="number" inputmode="numeric" min="1" step="1" placeholder="0"></div>
+        </div>
+        <div class="ok-row"><button class="ok-btn" id="okBtn" type="submit">確定</button></div>
+        <div class="msg" id="msg" role="status"></div>
+      </form>
+    </div>
+  </div>
+  <div class="mobile-slot" id="mobileSlot"></div>
+</div>
+
+<!-- checkout / printer overlay -->
+<div class="overlay" id="printOv" role="dialog" aria-modal="true" aria-label="每日結帳">
+  <div class="backdrop"></div>
+  <div class="ov-top">
+    <h3>今日結帳</h3>
+    <span class="sp"></span>
+    <span class="pchip">★ 積分 <b id="pchipVal">0</b></span>
+    <button class="ghost" id="skipBtn">略過動畫</button>
+  </div>
+  <div class="print-done" id="printDone">
+    <button class="ghost" id="closePrint">關閉</button>
+    <button class="solid" id="fileBtn">收進紀錄夾</button>
+  </div>
+  <div class="scroll-hint" id="scrollHint">上下滑動看整張收據</div>
+  <div class="print-stage" id="printStage">
+    <div class="paper-wrap" id="paperWrap"><div class="paper" id="paper"><div class="paper-inner" id="paperInner"></div></div></div>
+    <div class="big-printer" id="bigPrinter"></div>
+  </div>
+</div>
+
+<!-- records overlay -->
+<div class="overlay" id="recOv" role="dialog" aria-modal="true" aria-label="查看紀錄">
+  <div class="backdrop" data-close></div>
+  <div class="sheet">
+    <div class="sheet-h"><h3>記帳紀錄夾</h3><span class="sp"></span><button class="x-btn" data-close aria-label="關閉">×</button></div>
+    <div class="month" id="monthSum"></div>
+    <div id="recBody"></div>
+  </div>
+</div>
+
+<!-- receipt detail overlay -->
+<div class="overlay" id="detOv" role="dialog" aria-modal="true" aria-label="明細">
+  <div class="backdrop" data-close></div>
+  <div class="sheet" style="width:min(400px,94vw)">
+    <div class="sheet-h"><h3 id="detTitle">明細</h3><span class="sp"></span><button class="x-btn" data-close aria-label="關閉">×</button></div>
+    <div class="detail-paper" id="detPaper"></div>
+    <div class="hint">按 × 可以刪掉記錯的那一筆</div>
+  </div>
+</div>
+
+<!-- shopping list overlay -->
+<div class="overlay" id="cartOv" role="dialog" aria-modal="true" aria-label="購物清單">
+  <div class="backdrop" data-close></div>
+  <aside class="drawer">
+    <div class="drawer-h"><h3>購物清單</h3><span class="sp"></span><button class="x-btn" data-close aria-label="關閉">×</button></div>
+    <p class="cart-sub">常買的東西記在這裡，買到就打勾，會自動記進今天的明細。隔天勾勾會清空，清單會留著。</p>
+    <form class="cart-add" id="cartAdd" autocomplete="off">
+      <div class="cart-add-row">
+        <input id="cName" maxlength="20" placeholder="要買什麼？例如：牛奶" aria-label="品項">
+        <input id="cPrice" type="number" inputmode="numeric" min="1" step="1" placeholder="金額" aria-label="金額">
+      </div>
+      <div class="cart-cats" id="cartCats" role="radiogroup" aria-label="種類"></div>
+      <button class="solid cart-add-btn" type="submit">加入清單</button>
+    </form>
+    <div class="cart-sum" id="cartSum"></div>
+    <div class="drawer-b" id="cartList"></div>
+  </aside>
+</div>
+
+<!-- customize overlay -->
+<div class="overlay" id="custOv" role="dialog" aria-modal="true" aria-label="自訂">
+  <div class="backdrop" data-close></div>
+  <aside class="drawer">
+    <div class="drawer-h"><h3>自訂</h3><span class="sp"></span><span class="pchip" style="box-shadow:0 4px 10px -4px rgba(42,47,69,.35)">★ <b id="custPts">0</b></span><button class="x-btn" data-close aria-label="關閉">×</button></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="store">商店</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="clerk">收銀員</button>
+    </div>
+    <div class="drawer-b" id="custBody"></div>
+  </aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pad = n => String(n).padStart(2, '0');
+const fmt = n => Number(n).toLocaleString('zh-TW');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const WD = '日一二三四五六';
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function hash(str){ let h = 2166136261; for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function todayKey(d = new Date()){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function parseKey(k){ const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d); }
+const ease = t => t<.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+function tween(dur, fn, e = ease){ return new Promise(res => { if (reduced) dur = Math.min(dur, 60); const t0 = performance.now(); const f = now => { const t = Math.min(1, (now - t0) / dur); fn(e(t)); t < 1 ? requestAnimationFrame(f) : res(); }; requestAnimationFrame(f); }); }
+
+/* ================= data ================= */
+const CATS = [
+  {id:'food',  label:'餐食', ph:'雞腿便當'},
+  {id:'drink', label:'飲料', ph:'珍珠奶茶'},
+  {id:'shop',  label:'購物', ph:'新外套'},
+  {id:'trans', label:'交通', ph:'悠遊卡加值'},
+  {id:'fun',   label:'娛樂', ph:'電影票'},
+  {id:'daily', label:'日用', ph:'洗髮精'},
+  {id:'study', label:'學習', ph:'原文書'},
+  {id:'other', label:'其他', ph:'朋友生日禮物'},
+];
+const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+const THEMES = [
+  {id:'conv',  name:'便利商店', cost:0,   wall:'#EAF4F1', wain:'#2FB8A6', side:'#D2E6E0', ceil:'#C3DAD3', floor:'#F3EFE6', ctop:'#FAFBFD', cfront:'#2FB8A6', cstripe:'#FFC94D', shelf:'#C9D3DF', trim:'#FFFFFF', sign:'#2FB8A6', signText:'#FFFFFF', lamp:'#FFC94D', pat:'pat-stripe', view:'day', goods:'snacks', extra:'open'},
+  {id:'cafe',  name:'街角咖啡', cost:30,  wall:'#F1E3D3', wain:'#8A5A3B', side:'#E2CDB6', ceil:'#D6BD9F', floor:'#B98A62', ctop:'#E8D2B8', cfront:'#6B4430', cstripe:'#D9A066', shelf:'#8A5A3B', trim:'#6B4430', sign:'#2E2A28', signText:'#F7E7C9', lamp:'#2E2A28', pat:'pat-brick', view:'day', goods:'cups', extra:'chalk'},
+  {id:'book',  name:'午後書店', cost:40,  wall:'#E5ECF6', wain:'#3D5A80', side:'#D0DAEA', ceil:'#C3CEE0', floor:'#C9A57B', ctop:'#EADBC4', cfront:'#3D5A80', cstripe:'#F2C14E', shelf:'#9C6B43', trim:'#3D5A80', sign:'#F2C14E', signText:'#2A2F45', lamp:'#3D5A80', pat:'pat-panel', view:'day', goods:'books', extra:'bunting'},
+  {id:'night', name:'夜市小攤', cost:60,  wall:'#2B2F55', wain:'#E8493D', side:'#22264A', ceil:'#1A1D3B', floor:'#3A3550', ctop:'#F7E7C9', cfront:'#C8323C', cstripe:'#FFC94D', shelf:'#7A4433', trim:'#FFC94D', sign:'#C8323C', signText:'#FFE9A8', lamp:'#F0614F', pat:'pat-dots', view:'night', goods:'snacks', extra:'lanterns'},
+  {id:'space', name:'太空站',   cost:120, wall:'#DCE3F0', wain:'#5B6B8C', side:'#C5CEDE', ceil:'#AAB6CB', floor:'#97A3BA', ctop:'#EEF2F8', cfront:'#4C5A78', cstripe:'#6FE3FF', shelf:'#7D8AA6', trim:'#4C5A78', sign:'#1D2440', signText:'#6FE3FF', lamp:'#8E7CF0', pat:'pat-grid', view:'space', goods:'capsules', extra:'lights'},
+];
+const SKINS  = [{id:'s1',name:'奶油',c:'#FFE0C7',cost:0},{id:'s2',name:'蜜桃',c:'#F5C6A2',cost:0},{id:'s3',name:'焦糖',c:'#D49C76',cost:0},{id:'s4',name:'可可',c:'#A26845',cost:0}];
+const HAIRS  = [{id:'short',name:'短髮',cost:0},{id:'bob',name:'鮑伯頭',cost:0},{id:'bun',name:'丸子頭',cost:20},{id:'spiky',name:'刺刺頭',cost:20},{id:'twin',name:'雙馬尾',cost:40}];
+const HAIRC  = [{id:'black',name:'墨黑',c:'#2E2C38',cost:0},{id:'brown',name:'可可',c:'#7A4A2B',cost:0},{id:'pink',name:'草莓',c:'#FF8FB1',cost:15},{id:'blue',name:'海鹽',c:'#5A8DF0',cost:15},{id:'gold',name:'蜂蜜',c:'#F2C14E',cost:15},{id:'silver',name:'銀白',c:'#D8DEE9',cost:25}];
+const SHIRTS = [{id:'mint',name:'薄荷',c:'#2FB8A6',cost:0},{id:'blue',name:'天藍',c:'#4C7DF0',cost:0},{id:'red',name:'番茄',c:'#F0614F',cost:0},{id:'sun',name:'奶油黃',c:'#FFC94D',cost:0},{id:'lilac',name:'丁香紫',c:'#8E7CF0',cost:15},{id:'ink',name:'夜墨',c:'#353A55',cost:25}];
+const ACCS   = [{id:'none',name:'無',cost:0},{id:'glasses',name:'圓眼鏡',cost:15},{id:'bow',name:'蝴蝶結',cost:20},{id:'cap',name:'鴨舌帽',cost:25},{id:'phones',name:'耳機',cost:35},{id:'crown',name:'皇冠',cost:100}];
+const byId = (arr, id) => arr.find(x => x.id === id) || arr[0];
+
+function defaultState(){ return { v:1, points:30, owned:[], theme:'conv', storeName:'天天記帳舖', clerkName:'小樂', catName:'薇薇', look:{skin:'s1', hair:'bob', hairColor:'brown', shirt:'mint', acc:'none'}, muted:false, welcomed:false, cart:[] }; }
+let S = defaultState();
+let DAYS = {};
+function normState(o){ const d = defaultState(); const s = Object.assign(d, o || {}); if (s.storeName === '樂妮' + '記帳舖') s.storeName = '天天記帳舖'; if (!s.clerkName) s.clerkName = '小樂'; if (!s.catName) s.catName = '薇薇'; s.look = Object.assign(defaultState().look, (o && o.look) || {}); if (!Array.isArray(s.owned)) s.owned = []; if (!Array.isArray(s.cart)) s.cart = []; s.points = Math.max(0, Number(s.points) || 0); return s; }
+function normDay(k, o){ const d = Object.assign({date:k, entries:[], settled:false, rewarded:0, earned:0}, o || {}); d.entries = Array.isArray(d.entries) ? d.entries.filter(e => e && e.id) : []; return d; }
+
+/* ---------- persistence: account database when available, browser storage otherwise ---------- */
+const LS = 'lenni-ledger-v1';
+function saveLocal(){ try { localStorage.setItem(LS, JSON.stringify({S, DAYS})); } catch(e){} }
+function loadLocal(){ try { const raw = localStorage.getItem(LS); if (!raw) return; const o = JSON.parse(raw); S = normState(o.S); DAYS = {}; Object.entries(o.DAYS || {}).forEach(([k,v]) => DAYS[k] = normDay(k, v)); } catch(e){} }
+const R = { db:null, uid:null, ok:false, w:{} };
+function setSync(mode){ const c = $('#syncChip'); c.className = 'chip ' + (mode==='cloud'?'sync-cloud':mode==='load'?'sync-load':''); $('#syncText').textContent = mode==='cloud' ? '已存到你的帳號' : mode==='load' ? '連線中…' : '存在這個瀏覽器'; }
+function writeDoc(id, getData){
+  saveLocal();
+  if (!R.ok) return;
+  const st = R.w[id] || (R.w[id] = {busy:false, dirty:false});
+  st.dirty = true;
+  if (!st.busy) flushDoc(id, getData);
+}
+async function flushDoc(id, getData){
+  const st = R.w[id]; st.busy = true;
+  while (st.dirty && R.ok){
+    st.dirty = false;
+    const data = JSON.parse(JSON.stringify(getData() || {}));
+    const ref = R.db.collection('data/users/' + R.uid).doc(id);
+    try { await ref.set(data); }
+    catch(e){
+      if (e && e.code === 'unavailable'){ await sleep(400 + Math.random()*600); try { await ref.set(data); continue; } catch(e2){} }
+      R.ok = false; setSync('local');
+      if (e && e.code === 'quota_exceeded') toast('帳號空間已滿，資料先存在這個瀏覽器');
+    }
+  }
+  st.busy = false;
+}
+const saveState = () => writeDoc('state', () => S);
+const saveDay = k => writeDoc('day-' + k, () => DAYS[k]);
+async function initRemote(){
+  if (!(window.claude && typeof window.claude.use === 'function')) { setSync('local'); return; }
+  setSync('load');
+  let settled = false;
+  const timer = setTimeout(() => { if (!settled) setSync('local'); }, 10000);
+  try {
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) throw 0;
+    const uid = await user.id();
+    if (!uid) throw 0;
+    const snap = await db.collection('data/users/' + uid).get();
+    settled = true; clearTimeout(timer);
+    R.db = db; R.uid = uid; R.ok = true;
+    let rState = null; const rDays = {};
+    snap.docs.forEach(d => { if (!d.exists) return; const v = JSON.parse(JSON.stringify(d.data())); if (d.id === 'state') rState = v; else if (d.id.startsWith('day-')) rDays[d.id.slice(4)] = normDay(d.id.slice(4), v); });
+    if (rState) { const muted = S.muted; S = normState(rState); S.muted = muted; } else saveState();
+    const keys = new Set([...Object.keys(rDays), ...Object.keys(DAYS)]);
+    keys.forEach(k => {
+      const a = rDays[k], b = DAYS[k];
+      if (a && !b) { DAYS[k] = a; return; }
+      if (b && !a) { DAYS[k] = b; saveDay(k); return; }
+      const ids = new Set(a.entries.map(e => e.id));
+      const extra = b.entries.filter(e => !ids.has(e.id));
+      const m = normDay(k, Object.assign({}, b, a));
+      m.entries = [...a.entries, ...extra].sort((x,y) => (x.t||'') < (y.t||'') ? -1 : 1);
+      m.rewarded = Math.max(a.rewarded||0, b.rewarded||0);
+      m.settled = a.settled || b.settled;
+      DAYS[k] = m;
+      if (extra.length) saveDay(k);
+    });
+    saveLocal();
+    setSync('cloud');
+    applyAll();
+  } catch(e){
+    settled = true; clearTimeout(timer); setSync('local');
+  }
+}
+
+/* ================= audio ================= */
+let AC = null, master = null, noise = null;
+function audio(){
+  if (S.muted) return null;
+  try {
+    if (!AC){ AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.gain.value = .9; master.connect(AC.destination); try { const sb = AC.createBufferSource(); sb.buffer = AC.createBuffer(1, 1, 22050); sb.connect(AC.destination); sb.start(0); } catch(e){} }
+    if (AC.state === 'suspended') AC.resume();
+    return AC;
+  } catch(e){ return null; }
+}
+function noiseBuf(a){ if (!noise){ noise = a.createBuffer(1, a.sampleRate, a.sampleRate); const d = noise.getChannelData(0); for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1; } return noise; }
+function env(g, t, peak, a, hold, r){ g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t+a); g.gain.setValueAtTime(peak, t+a+hold); g.gain.exponentialRampToValueAtTime(0.0001, t+a+hold+r); }
+function beep(){
+  const a = audio(); if (!a) return; const t = a.currentTime;
+  [2480, 4960].forEach((f, i) => { const o = a.createOscillator(), g = a.createGain(); o.type = i ? 'sine' : 'square'; o.frequency.value = f; env(g, t, i ? .02 : .07, .006, .11, .03); o.connect(g).connect(master); o.start(t); o.stop(t+.2); });
+}
+function buzz(sec){
+  const a = audio(); if (!a) return; const t = a.currentTime;
+  const src = a.createBufferSource(); src.buffer = noiseBuf(a); src.loop = true;
+  const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3300; bp.Q.value = 1.1;
+  const chat = a.createGain(); chat.gain.value = .06;
+  const lfo = a.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 62 + Math.random()*10;
+  const lg = a.createGain(); lg.gain.value = .06; lfo.connect(lg).connect(chat.gain);
+  const motor = a.createOscillator(); motor.type = 'sawtooth'; motor.frequency.value = 118;
+  const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520;
+  const mg = a.createGain(); mg.gain.value = .05;
+  const out = a.createGain();
+  out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(1, t+.012); out.gain.setValueAtTime(1, t+Math.max(.03, sec-.02)); out.gain.linearRampToValueAtTime(0, t+sec);
+  src.connect(bp).connect(chat).connect(out);
+  motor.connect(lp).connect(mg).connect(out);
+  out.connect(master);
+  [src, lfo, motor].forEach(n => { n.start(t); n.stop(t+sec+.05); });
+}
+function cutSound(){
+  const a = audio(); if (!a) return; const t = a.currentTime;
+  [0, .08].forEach(d => { const s = a.createBufferSource(); s.buffer = noiseBuf(a); const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2600; const g = a.createGain(); env(g, t+d, .35, .002, .02, .05); s.connect(hp).connect(g).connect(master); s.start(t+d); s.stop(t+d+.1); });
+  const o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(90, t+.1); env(g, t, .25, .004, .02, .1); o.connect(g).connect(master); o.start(t); o.stop(t+.2);
+}
+function coinSound(delay=0){
+  const a = audio(); if (!a) return; const t = a.currentTime + delay;
+  [[988,0,.06],[1319,.06,.28]].forEach(([f,d,r]) => { const o = a.createOscillator(), g = a.createGain(); o.type = 'triangle'; o.frequency.value = f; env(g, t+d, .12, .004, .02, r); o.connect(g).connect(master); o.start(t+d); o.stop(t+d+r+.05); });
+}
+function pop(f=640){ const a = audio(); if (!a) return; const t = a.currentTime; const o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f*1.6, t+.07); env(g, t, .1, .004, .02, .07); o.connect(g).connect(master); o.start(t); o.stop(t+.15); }
+function swish(){ const a = audio(); if (!a) return; const t = a.currentTime; const s = a.createBufferSource(); s.buffer = noiseBuf(a); const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4; bp.frequency.setValueAtTime(900, t); bp.frequency.exponentialRampToValueAtTime(3200, t+.12); const g = a.createGain(); env(g, t, .12, .01, .03, .09); s.connect(bp).connect(g).connect(master); s.start(t); s.stop(t+.2); }
+function meow(){
+  const a = audio(); if (!a) return; const t = a.currentTime;
+  const o = a.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(520, t); o.frequency.linearRampToValueAtTime(860, t+.16); o.frequency.linearRampToValueAtTime(470, t+.5);
+  const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.setValueAtTime(900, t); bp.frequency.linearRampToValueAtTime(1500, t+.18); bp.frequency.linearRampToValueAtTime(800, t+.5); bp.Q.value = 3;
+  const g = a.createGain(); env(g, t, .25, .04, .26, .2);
+  o.connect(bp).connect(g).connect(master); o.start(t); o.stop(t+.6);
+}
+function tick(){ const a = audio(); if (!a) return; const t = a.currentTime; const s = a.createBufferSource(); s.buffer = noiseBuf(a); const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 4000; const g = a.createGain(); env(g, t, .2, .001, .005, .02); s.connect(hp).connect(g).connect(master); s.start(t); s.stop(t+.05); }
+
+/* ---------- SVG helpers (parse as real SVG so every engine, incl. iOS Safari, draws it) ---------- */
+const SVGNS = 'http://www.w3.org/2000/svg';
+function setSVG(el, markup){
+  let ok = false;
+  try {
+    const doc = new DOMParser().parseFromString(`<svg xmlns="${SVGNS}">${markup}</svg>`, 'image/svg+xml');
+    if (!doc.getElementsByTagName('parsererror').length){
+      while (el.firstChild) el.removeChild(el.firstChild);
+      Array.from(doc.documentElement.childNodes).forEach(n => el.appendChild(document.importNode(n, true)));
+      ok = true;
+    }
+  } catch(e){}
+  if (!ok){ console.warn('svg-fallback', el.id); el.innerHTML = markup; }
+}
+// animate an SVG element through its transform attribute
+function svgAnim(el, dur, fn){
+  if (!el) return Promise.resolve();
+  const tok = {}; el._anim = tok;
+  return tween(dur, t => { if (el._anim === tok) el.setAttribute('transform', fn(t)); }, x => x)
+    .then(() => { if (el._anim === tok) el.removeAttribute('transform'); });
+}
+function cashierJump(){ svgAnim($('#cashier'), 650, t => { const up = -22*Math.sin(Math.PI*Math.min(1, t/.7)); const sq = t > .7 ? Math.sin(Math.PI*(t-.7)/.3)*.05 : 0; return `translate(0 ${up.toFixed(2)}) translate(0 344) scale(${(1+sq).toFixed(3)} ${(1-sq).toFixed(3)}) translate(0 -344)`; }); }
+function cashierSpin(){ svgAnim($('#cashier'), 800, t => `scale(${Math.cos(t*Math.PI*2).toFixed(3)} 1)`); }
+
+/* ================= stage scaling ================= */
+const stage = $('#stage'), wrap = $('#stageWrap'), order = $('#order'), hud = $('.hud');
+const BTN_IDS = ['#btnCust', '#btnCart', '#btnRec', '#btnPay'];
+// On narrow screens show a cropped, larger view of the diorama (store + belt end) and move controls into normal page flow.
+const CROP = {x:28, y:194, w:850, h:520};
+let scale = 1, compact = false, side = false;
+function fit(){
+  const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+  compact = vw < 900;
+  side = compact && vw > vh && vw >= 600;
+  document.body.classList.toggle('compact', compact);
+  document.body.classList.toggle('side', side);
+  const slot = $('#mobileSlot'), mt = $('#mtool'), btns = $('#mtoolBtns');
+  if (compact){
+    if (order.parentElement !== slot) slot.appendChild(order);
+    if (hud.parentElement !== mt){ BTN_IDS.forEach(id => btns.appendChild($(id))); mt.appendChild(hud); }
+  } else {
+    if (hud.parentElement !== stage){ BTN_IDS.forEach(id => stage.appendChild($(id))); stage.appendChild(hud); }
+    if (order.parentElement !== stage) stage.appendChild(order);
+  }
+  wrap.style.width = '';
+  const ww = wrap.clientWidth;
+  if (compact){
+    const toolH = $('#mtool').getBoundingClientRect().height;
+    const maxH = side ? Math.max(160, vh - toolH - 36) : Infinity;
+    scale = Math.min(ww / CROP.w, maxH / CROP.h, 1.12);
+    wrap.style.width = (CROP.w * scale) + 'px';
+    wrap.style.height = (CROP.h * scale) + 'px';
+    stage.style.left = '0px';
+    stage.style.transform = `translate(${(-CROP.x * scale).toFixed(2)}px, ${(-CROP.y * scale).toFixed(2)}px) scale(${scale})`;
+  } else {
+    const avH = Math.max(380, vh - 30);
+    scale = Math.min(ww/1200, avH/720, 1.3);
+    stage.style.transform = `scale(${scale})`;
+    stage.style.left = Math.max(0, (ww - 1200*scale)/2) + 'px';
+    wrap.style.height = (720*scale) + 'px';
+  }
+}
+let fitRaf = 0;
+const refit = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fit); };
+window.addEventListener('resize', refit);
+window.addEventListener('resize', () => { if (busy) sizePrinter(); });
+window.addEventListener('orientationchange', () => setTimeout(fit, 250));
+
+/* ================= store scene ================= */
+const storeSvg = $('#store');
+function buildFloor(){
+  const vp = {x:365, y:170}; let s = '';
+  for (let x0 = 12; x0 <= 720; x0 += 58){ const t = (500 - vp.y)/(340 - vp.y); s += `<line x1="${x0}" y1="340" x2="${(vp.x + (x0 - vp.x)*t).toFixed(1)}" y2="500"/>`; }
+  [352, 368, 390, 420, 458].forEach(y => s += `<line x1="0" y1="${y}" x2="660" y2="${y}"/>`);
+  setSVG($('#floorLines'), s);
+  let tk = ''; for (let i=0;i<12;i++){ const a = i*Math.PI/6; const r1 = i%3 ? 19 : 16; tk += `<line x1="${(290+Math.sin(a)*r1).toFixed(1)}" y1="${(172-Math.cos(a)*r1).toFixed(1)}" x2="${(290+Math.sin(a)*21).toFixed(1)}" y2="${(172-Math.cos(a)*21).toFixed(1)}"/>`; }
+  setSVG($('#ticks'), tk);
+  const ps = $('#printerSpot');
+  setSVG(ps, `<svg x="106" y="234" width="146" height="110" viewBox="0 0 240 180" overflow="visible">${new XMLSerializer().serializeToString($('#printerSym')).replace(/^<symbol[^>]*>/, '').replace(/<\/symbol>$/, '')}</svg>`);
+}
+const PAL = ['#F0614F','#FFC94D','#2FB8A6','#4C7DF0','#8E7CF0','#FF8FB1','#7AD3F0','#9BE15D'];
+function good(kind, x, by, r){
+  const c = PAL[Math.floor(r()*PAL.length)];
+  const hi = (x0,y0,w,h) => `<rect x="${x0}" y="${y0}" width="${Math.max(2,w*.28)}" height="${h}" fill="#fff" opacity=".28"/><rect x="${x0+w*.78}" y="${y0}" width="${w*.22}" height="${h}" fill="#000" opacity=".14"/>`;
+  if (kind === 'books'){
+    const w = 6 + Math.floor(r()*5), h = 34 + Math.floor(r()*18), y = by - h;
+    const lean = r() < .15 ? ` transform="rotate(-8 ${x} ${by})"` : '';
+    return {w, svg:`<g${lean}><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="${c}"/>${hi(x,y,w,h)}<rect x="${x}" y="${y+6}" width="${w}" height="3" fill="#fff" opacity=".5"/></g>`};
+  }
+  if (kind === 'capsules'){
+    const w = 14, h = 30 + Math.floor(r()*14), y = by - h;
+    return {w:w+2, svg:`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="7" fill="${c}" opacity=".9"/><rect x="${x+2}" y="${y+3}" width="4" height="${h-10}" rx="2" fill="#fff" opacity=".6"/><rect x="${x}" y="${y+h/2-1}" width="${w}" height="3" fill="#2A2F45" opacity=".35"/><circle cx="${x+7}" cy="${y-4}" r="2.4" fill="#6FE3FF" class="lights-blink"/>`};
+  }
+  if (kind === 'cups'){
+    const t = r();
+    if (t < .4){ const w=18,h=17,y=by-h; return {w:w+7, svg:`<path d="M${x+w} ${y+4} q8 0 8 6 q0 6 -8 6" fill="none" stroke="${c}" stroke-width="3"/><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="${c}"/>${hi(x,y,w,h)}`}; }
+    if (t < .75){ const w=16,h=28,y=by-h; return {w, svg:`<rect x="${x}" y="${y+5}" width="${w}" height="${h-5}" rx="4" fill="#F3E3C8"/><rect x="${x+2}" y="${y+12}" width="${w-4}" height="${h-15}" rx="3" fill="#8A5A3B"/><rect x="${x-1}" y="${y}" width="${w+2}" height="7" rx="2" fill="${c}"/>${hi(x,y+5,w,h-5)}`}; }
+    const w=18,h=32,y=by-h; return {w, svg:`<path d="M${x} ${y+6} L${x+w} ${y+6} L${x+w} ${by} L${x} ${by}Z" fill="#C9A57B"/><path d="M${x} ${y+6} L${x+w/2} ${y} L${x+w} ${y+6}Z" fill="#B48C60"/><rect x="${x+3}" y="${y+14}" width="${w-6}" height="9" rx="2" fill="${c}"/>${hi(x,y+6,w,h-6)}`};
+  }
+  const t = r();
+  if (t < .45){ const w = 18, h = 24 + Math.floor(r()*12), y = by - h; return {w, svg:`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${c}"/>${hi(x,y,w,h)}<rect x="${x+3}" y="${y+h*.35}" width="${w-6}" height="6" rx="2" fill="#fff" opacity=".85"/>`}; }
+  if (t < .75){ const w = 11, h = 34, y = by - h; return {w, svg:`<rect x="${x+2}" y="${y}" width="7" height="6" rx="1.5" fill="#fff"/><rect x="${x}" y="${y+5}" width="${w}" height="${h-5}" rx="4" fill="${c}"/>${hi(x,y+5,w,h-5)}<rect x="${x}" y="${y+16}" width="${w}" height="8" fill="#fff" opacity=".8"/>`}; }
+  const w = 13, h = 19, y = by - h; return {w, svg:`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${c}"/>${hi(x,y,w,h)}<rect x="${x}" y="${y+2}" width="${w}" height="2" fill="#000" opacity=".2"/>`};
+}
+function buildGoods(kind){
+  const r = rng(hash(kind)); let out = '';
+  [140, 210, 280].forEach(by => {
+    let x = 539;
+    while (true){ const g = good(kind, x, by, r); if (x + g.w > 644) break; out += `<g class="good hot" data-act="good">${g.svg}</g>`; x += g.w + 3; }
+  });
+  setSVG($('#goods'), out);
+}
+function buildExtras(t){
+  const skew = 'matrix(1,0.43,0,1,0,0)';
+  let s = '';
+  if (t.extra === 'open') s = `<g transform="${skew}"><rect x="14" y="98" width="44" height="58" rx="6" fill="#2A2F45"/><text x="36" y="122" text-anchor="middle" font-size="13" fill="#FF6B8B" filter="url(#neon)">OPEN</text><text x="36" y="144" text-anchor="middle" font-size="12" fill="#6FE3FF" filter="url(#neon)">24H</text></g>`;
+  if (t.extra === 'chalk') s = `<g id="chalk" class="hot" data-act="chalk" transform="${skew}"><rect x="10" y="92" width="52" height="86" rx="4" fill="#3B4A40" stroke="#8A5A3B" stroke-width="4"/><text x="36" y="114" text-anchor="middle" font-size="11" fill="#F7E7C9">今日</text><text x="36" y="134" text-anchor="middle" font-size="13" fill="#fff">拿鐵</text><text x="36" y="156" text-anchor="middle" font-size="12" fill="#FFC94D">$65</text></g>`;
+  if (t.extra === 'bunting'){ const cols = ['#F0614F','#FFC94D','#2FB8A6','#4C7DF0','#8E7CF0']; s = `<path d="M80 34 Q300 64 520 34" fill="none" stroke="#7A6A55" stroke-width="1.5"/>`; for (let i=0;i<14;i++){ const x = 92 + i*31; const y = 34 + Math.sin((x-80)/440*Math.PI)*15; s += `<path d="M${x-9} ${y.toFixed(1)} L${x+9} ${y.toFixed(1)} L${x} ${(y+18).toFixed(1)}Z" fill="${cols[i%5]}"/>`; } }
+  if (t.extra === 'lanterns'){ s = `<path d="M270 30 Q400 52 520 30" fill="none" stroke="#FFC94D" stroke-width="1.5"/>`; [300, 420, 500].forEach((x,i) => { const y = 36 + Math.sin((x-270)/250*Math.PI)*10; s += `<circle cx="${x}" cy="${y+18}" r="22" fill="#FFB347" opacity=".2"/><rect x="${x-6}" y="${y}" width="12" height="5" fill="#E0A800"/><ellipse cx="${x}" cy="${y+18}" rx="13" ry="14" fill="url(#g-lantern)"/><rect x="${x-6}" y="${y+30}" width="12" height="4" fill="#E0A800"/><line x1="${x}" y1="${y+34}" x2="${x}" y2="${y+44}" stroke="#FFC94D" stroke-width="2"/>`; }); }
+  if (t.extra === 'lights'){ for (let i=0;i<20;i++) s += `<circle cx="${84 + i*30}" cy="16" r="3.2" fill="${i%2?'#6FE3FF':'#8E7CF0'}" class="lights-blink" style="animation-delay:${(i%5)*.3}s"/>`; s += `<g transform="${skew}"><circle cx="36" cy="128" r="22" fill="#4C5A78"/><circle cx="36" cy="128" r="16" fill="url(#g-space)"/><circle cx="31" cy="122" r="2" fill="#fff"/><circle cx="42" cy="134" r="1.4" fill="#fff"/></g>`; }
+  setSVG($('#extras'), s);
+}
+let viewMode = 'day';
+function setView(v){ viewMode = v; $('#viewDay').style.display = v==='day' ? '' : 'none'; $('#viewNight').style.display = v==='night' ? '' : 'none'; $('#viewSpace').style.display = v==='space' ? '' : 'none'; }
+function applyTheme(){
+  const t = byId(THEMES, S.theme);
+  ['wall','wain','side','ceil','floor','ctop','cfront','cstripe','shelf','trim','sign','signText','lamp'].forEach(k => storeSvg.style.setProperty('--'+k, t[k]));
+  $('#wallPat').setAttribute('fill', `url(#${t.pat})`);
+  buildGoods(t.goods); buildExtras(t); setView(t.view);
+  const name = S.storeName || '天天記帳舖';
+  const st = $('#signText'); st.textContent = name; st.setAttribute('font-size', Math.min(22, Math.floor(146 / Math.max(1, name.length))));
+}
+
+/* ---------- cashier ---------- */
+const HP = {
+  short:  'M-46 168 Q-50 114 0 112 Q50 114 46 168 Q44 146 30 138 Q20 150 2 140 Q-14 152 -30 140 Q-42 150 -46 168Z',
+  fringe: 'M-47 172 Q-52 112 0 110 Q52 112 47 172 Q46 150 36 142 Q24 154 6 144 Q-10 156 -26 144 Q-40 154 -47 172Z',
+  bobBack:'M-51 160 Q-56 110 0 108 Q56 110 51 160 L53 214 Q32 224 22 208 L-22 208 Q-32 224 -53 214Z',
+  spiky:  'M-46 168 Q-52 132 -40 122 L-46 100 L-24 112 L-20 88 L-4 106 L4 84 L14 106 L30 90 L28 114 L48 104 L42 126 Q52 142 46 168 Q40 148 26 140 Q12 150 -6 140 Q-24 152 -34 142 Q-42 152 -46 168Z',
+  twinL:  'M-40 148 Q-80 168 -72 232 Q-68 254 -56 240 Q-60 202 -34 176Z',
+  twinR:  'M40 148 Q80 168 72 232 Q68 254 56 240 Q60 202 34 176Z',
+};
+function headParts(look){
+  const skin = byId(SKINS, look.skin).c, hair = byId(HAIRC, look.hairColor).c;
+  let back = '', front = '';
+  const shine = `<path d="M-28 126 Q-8 116 16 120" stroke="#fff" stroke-opacity=".35" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  switch (look.hair){
+    case 'bob':   back = `<path d="${HP.bobBack}" fill="${hair}"/><path d="${HP.bobBack}" fill="url(#g-cyl)" opacity=".6"/>`; front = `<path d="${HP.fringe}" fill="${hair}"/>`; break;
+    case 'bun':   back = `<circle cx="0" cy="104" r="21" fill="${hair}"/><circle cx="0" cy="104" r="21" fill="url(#g-sphere)"/>`; front = `<path d="${HP.short}" fill="${hair}"/><rect x="-14" y="118" width="28" height="6" rx="3" fill="#F0614F"/>`; break;
+    case 'spiky': front = `<path d="${HP.spiky}" fill="${hair}"/>`; break;
+    case 'twin':  back = `<path d="${HP.twinL}" fill="${hair}"/><path d="${HP.twinR}" fill="${hair}"/><path d="${HP.twinL}" fill="url(#g-cyl)" opacity=".5"/><path d="${HP.twinR}" fill="url(#g-cyl)" opacity=".5"/>`; front = `<path d="${HP.fringe}" fill="${hair}"/><circle cx="-42" cy="152" r="6" fill="#FF8FB1"/><circle cx="42" cy="152" r="6" fill="#FF8FB1"/>`; break;
+    default:      front = `<path d="${HP.short}" fill="${hair}"/>`;
+  }
+  front += shine;
+  let acc = '';
+  switch (look.acc){
+    case 'glasses': acc = `<g fill="#fff" fill-opacity=".18" stroke="#2A2F45" stroke-width="3"><circle cx="-16" cy="168" r="11"/><circle cx="16" cy="168" r="11"/></g><path d="M-5 167 Q0 164 5 167 M-27 166 L-42 162 M27 166 L42 162" stroke="#2A2F45" stroke-width="3" fill="none" stroke-linecap="round"/>`; break;
+    case 'bow': acc = `<g transform="translate(30 118) rotate(18)"><path d="M0 0 L-18 -11 Q-22 0 -18 11Z" fill="#FF6B8B"/><path d="M0 0 L18 -11 Q22 0 18 11Z" fill="#FF6B8B"/><circle r="5" fill="#E8456B"/></g>`; break;
+    case 'cap': acc = `<path d="M-48 142 Q-46 102 0 100 Q46 102 48 142 Z" fill="#F0614F"/><path d="M-48 142 Q-46 102 0 100 Q46 102 48 142 Z" fill="url(#g-sphere)"/><path d="M-6 140 Q36 128 78 146 Q44 156 -6 148Z" fill="#C9473A"/><circle cx="0" cy="101" r="4" fill="#C9473A"/><text x="0" y="132" text-anchor="middle" font-size="16" fill="#fff" font-family="Huninn, sans-serif">記</text>`; break;
+    case 'phones': acc = `<path d="M-50 164 Q-52 100 0 98 Q52 100 50 164" fill="none" stroke="#3A3F52" stroke-width="8" stroke-linecap="round"/><rect x="-62" y="148" width="18" height="32" rx="8" fill="#2FB8A6"/><rect x="44" y="148" width="18" height="32" rx="8" fill="#2FB8A6"/><rect x="-62" y="148" width="18" height="32" rx="8" fill="url(#g-cyl)"/><rect x="44" y="148" width="18" height="32" rx="8" fill="url(#g-cyl)"/>`; break;
+    case 'crown': acc = `<path d="M-26 118 L-31 90 L-14 104 L0 84 L14 104 L31 90 L26 118 Z" fill="url(#g-gold)" stroke="#C99A00" stroke-width="1.5"/><circle cx="0" cy="108" r="4" fill="#F0614F"/><circle cx="-16" cy="111" r="3" fill="#4C7DF0"/><circle cx="16" cy="111" r="3" fill="#2FB8A6"/>`; break;
+  }
+  const face = `
+    <circle cx="-44" cy="172" r="9" fill="${skin}"/><circle cx="44" cy="172" r="9" fill="${skin}"/>
+    <circle cx="0" cy="165" r="44" fill="${skin}"/><circle cx="0" cy="165" r="44" fill="url(#g-sphere)"/>
+    <ellipse cx="-27" cy="184" rx="7" ry="4.5" fill="#FF8FA3" opacity=".55"/><ellipse cx="27" cy="184" rx="7" ry="4.5" fill="#FF8FA3" opacity=".55"/>
+    <g class="eyes"><ellipse class="eye" cx="-16" cy="169" rx="5.2" ry="6.8" fill="#2A2F45"/><ellipse class="eye" cx="16" cy="169" rx="5.2" ry="6.8" fill="#2A2F45"/><circle cx="-14" cy="166" r="1.8" fill="#fff"/><circle cx="18" cy="166" r="1.8" fill="#fff"/></g>
+    <path class="brows" d="M-22 155 Q-16 152 -10 155 M10 155 Q16 152 22 155" stroke="#2A2F45" stroke-opacity=".55" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path class="mouth" d="M-8 188 Q0 196 8 188" stroke="#7A2E2E" stroke-width="2.8" fill="none" stroke-linecap="round"/>`;
+  return {back, face, front, acc};
+}
+function headSwatch(look){ const p = headParts(look); return `<svg class="sw" viewBox="-62 84 124 124" aria-hidden="true">${p.back}${p.face}${p.front}${p.acc}</svg>`; }
+const MOUTH = {smile:'M-8 188 Q0 196 8 188', open:'M-7 186 Q0 201 7 186 Q0 190 -7 186Z', o:'M-4 189 a4 5 0 1 0 8 0 a4 5 0 1 0 -8 0', grin:'M-11 186 Q0 200 11 186Z'};
+let C = {};
+function buildCashier(){
+  const look = S.look, skin = byId(SKINS, look.skin).c, shirt = byId(SHIRTS, look.shirt).c;
+  const p = headParts(look);
+  setSVG($('#cashier'), `
+    ${p.back}
+    <path d="M-50 230 Q-70 262 -62 300 Q-56 318 -34 318 L-24 306 Q-42 298 -44 278 L-40 244 Z" fill="${shirt}"/>
+    <path d="M-50 230 Q-70 262 -62 300 Q-56 318 -34 318 L-24 306 Q-42 298 -44 278 L-40 244 Z" fill="#000" opacity=".1"/>
+    <rect x="-10" y="198" width="20" height="24" rx="8" fill="${skin}"/><rect x="-10" y="198" width="20" height="12" fill="#000" opacity=".1"/>
+    <path d="M-52 344 L-50 252 Q-48 224 -22 216 L22 216 Q48 224 50 252 L52 344 Z" fill="${shirt}"/>
+    <path d="M-52 344 L-50 252 Q-48 224 -22 216 L22 216 Q48 224 50 252 L52 344 Z" fill="url(#g-cyl)"/>
+    <path d="M-14 216 L0 236 L14 216 L8 214 L0 226 L-8 214Z" fill="#fff"/>
+    <path d="M-26 240 L-14 217 M26 240 L14 217" stroke="#FAF7F0" stroke-width="5" stroke-linecap="round"/>
+    <path d="M-32 238 Q0 246 32 238 L36 344 L-36 344 Z" fill="#FAF7F0"/>
+    <path d="M-32 238 Q0 246 32 238 L36 344 L-36 344 Z" fill="url(#g-cyl)" opacity=".7"/>
+    <rect x="-18" y="288" width="36" height="22" rx="5" fill="none" stroke="#D9D3C4" stroke-width="2"/>
+    <rect x="6" y="250" width="26" height="14" rx="3" fill="#fff" stroke="${shirt}" stroke-width="2"/><text x="19" y="260.5" text-anchor="middle" font-size="${Math.min(8.5, 22 / Math.max(1, CLERK().length)).toFixed(1)}" fill="#2A2F45" font-family="Huninn, Noto Sans TC, sans-serif">${esc(CLERK())}</text>
+    <circle cx="-26" cy="312" r="10" fill="${skin}"/><circle cx="-26" cy="312" r="10" fill="url(#g-sphere)"/>
+    <g class="headG">${p.face}${p.front}${p.acc}</g>
+    <g id="armR">
+      <path d="M42 224 Q66 228 80 248 L98 266 L88 280 L70 266 Q52 254 44 250Z" fill="${shirt}"/>
+      <path d="M42 224 Q66 228 80 248 L98 266 L88 280 L70 266 Q52 254 44 250Z" fill="#000" opacity=".08"/>
+      <g transform="translate(96 262) rotate(14)">
+        <rect x="-6" y="0" width="12" height="26" rx="5" fill="#2F3442"/>
+        <rect x="-12" y="-13" width="50" height="19" rx="8" fill="url(#g-gun)"/>
+        <rect x="-8" y="-11" width="30" height="4" rx="2" fill="#fff" opacity=".2"/>
+        <rect x="34" y="-15" width="11" height="23" rx="4" fill="#1C1F27"/>
+        <rect class="gunWin" x="41" y="-11" width="3.5" height="15" rx="1.5" fill="#FF4D5E"/>
+        <rect x="2" y="-3" width="5" height="7" rx="2" fill="#F0614F"/>
+      </g>
+      <circle cx="96" cy="270" r="10" fill="${skin}"/><circle cx="96" cy="270" r="10" fill="url(#g-sphere)"/>
+    </g>`);
+  C = { eyes: $('#cashier .eyes'), mouth: $('#cashier .mouth'), brows: $('#cashier .brows'), arm: $('#armR'), gunWin: $('#cashier .gunWin'), head: $('#cashier .headG') };
+}
+function blink(){
+  if (!C.eyes || document.hidden) return;
+  $$('.eye', C.eyes).forEach(e => { const cx = e.getAttribute('cx'), cy = e.getAttribute('cy'); e.setAttribute('transform', `translate(${cx} ${cy}) scale(1 .12) translate(${-cx} ${-cy})`); });
+  setTimeout(() => $$('.eye', C.eyes || document).forEach(e => e.removeAttribute('transform')), 130);
+}
+setInterval(blink, 4300);
+function setArm(a){ C.arm && C.arm.setAttribute('transform', `rotate(${a.toFixed(2)} 44 228)`); }
+function setMouth(k){ if (!C.mouth) return; C.mouth.setAttribute('d', MOUTH[k] || MOUTH.smile); C.mouth.setAttribute('fill', k === 'smile' ? 'none' : '#7A2E2E'); }
+let mouthTimer;
+function face(k, ms=900){ setMouth(k); clearTimeout(mouthTimer); mouthTimer = setTimeout(() => setMouth('smile'), ms); }
+// pupils follow the pointer
+document.addEventListener('pointermove', e => {
+  if (!C.eyes) return;
+  const r = storeSvg.getBoundingClientRect();
+  const hx = r.left + (470/660)*r.width, hy = r.top + (168/500)*r.height;
+  const dx = e.clientX - hx, dy = e.clientY - hy, d = Math.hypot(dx, dy) || 1;
+  const k = Math.min(1, d/300);
+  C.eyes.setAttribute('transform', `translate(${(dx/d*3.2*k).toFixed(2)} ${(dy/d*2.4*k).toFixed(2)})`);
+});
+
+/* ---------- bubble ---------- */
+const bubble = $('#bubble');
+let talkTimer;
+function showPoints(){ bubble.classList.remove('talk'); bubble.innerHTML = `<div class="pts"><span class="star">★</span><small>現在積分</small><b id="bubPts">${fmt(S.points)}</b></div>`; }
+function say(text, ms=2800){ bubble.classList.remove('talk'); void bubble.offsetWidth; bubble.classList.add('talk'); bubble.textContent = text; clearTimeout(talkTimer); talkTimer = setTimeout(showPoints, ms); }
+function stagePt(svgX, svgY){ return {x:40 + svgX, y:200 + svgY}; }
+function miniBubble(text, sx, sy, ms=1600){ const p = stagePt(sx, sy); const el = document.createElement('div'); el.className = 'mini-bubble'; el.textContent = text; el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; stage.appendChild(el); setTimeout(() => el.remove(), ms); }
+function hearts(){ for (let i=0;i<4;i++){ const h = document.createElement('div'); h.className = 'heart'; h.textContent = '♥'; h.style.left = (500 + Math.random()*40) + 'px'; h.style.top = (316 + Math.random()*10) + 'px'; h.style.setProperty('--dx', (Math.random()*60-30)+'px'); h.style.animationDelay = (i*.12)+'s'; stage.appendChild(h); setTimeout(() => h.remove(), 1800); } }
+
+/* ---------- interactions ---------- */
+const CLERK = () => S.clerkName || '小樂', CATN = () => S.catName || '薇薇';
+const LINES = () => ['今天也辛苦了！',`我是店員${CLERK()}，有什麼要記的儘管說`,'每天記一筆，積分滾滾來','結帳時我會幫你把明細印出來','嘿嘿，被你發現我在發呆','喜歡我的造型嗎？到「自訂」幫我換裝吧',`窗台上的是店貓${CATN()}，摸摸牠`,'記帳不是省錢，是看清楚錢去哪','今天的你也很棒'];
+let lineIdx = 0, react = 0;
+async function cashierReact(){
+  const k = react++ % 4;
+  pop(700 + Math.random()*200);
+  { const L = LINES(); say(L[lineIdx++ % L.length]); }
+  if (k === 0){ cashierJump(); face('grin', 900); }
+  if (k === 1){ face('open', 1200); for (let i=0;i<2;i++){ await tween(180, t => setArm(-38*t)); await tween(180, t => setArm(-38*(1-t))); } }
+  if (k === 2){ face('grin', 1400); hearts(); }
+  if (k === 3){ cashierSpin(); face('o', 800); }
+}
+const LATTE = [
+  '今日推薦拿鐵！濃縮配上綿密奶泡，只要 $65',
+  '加 $10 可以換燕麥奶，順口又不膩喔',
+  '拿鐵配一塊司康，下午茶剛剛好',
+  '熱的冰的都有，今天想來哪一杯？',
+  '喝完別忘了在右邊選「飲料」記一筆唷',
+];
+let latteIdx = 0;
+let lightsOn = true;
+function act(name, el){
+  switch (name){
+    case 'cashier': cashierReact(); break;
+    case 'lamp':
+      lightsOn = !lightsOn; tick();
+      $('#dim').setAttribute('opacity', lightsOn ? 0 : .42); $('#glow').style.opacity = lightsOn ? 1 : 0; $('#bulb').setAttribute('fill', lightsOn ? '#FFF7D1' : '#8B90A0');
+      say(lightsOn ? '亮起來了！' : '哇，好暗…再點一下燈就亮了', 2000); face(lightsOn ? 'grin' : 'o'); break;
+    case 'plant': { svgAnim($('#plant'), 1400, t => `rotate(${(-5*Math.sin(t*Math.PI*3)*(1-t)).toFixed(2)} 50 486)`); swish(); say('盆栽說它今天有喝水', 1800); break; }
+    case 'good': { svgAnim(el, 520, t => `translate(0 ${(-12*Math.sin(Math.PI*t)).toFixed(2)})`); pop(500 + Math.random()*500); break; }
+    case 'cat': {
+      meow(); miniBubble(Math.random() < .5 ? '喵～' : `${CATN()}：喵嗚～`, 128, 136);
+      const tail = $('#catTail');
+      tween(900, t => tail.setAttribute('transform', `rotate(${(Math.sin(t*Math.PI*4)*18*(1-t*.5)).toFixed(1)} 227 199)`), x => x).then(() => tail.removeAttribute('transform'));
+      break;
+    }
+    case 'clock': {
+      tick(); const d = new Date();
+      say(`現在 ${pad(d.getHours())}:${pad(d.getMinutes())}，${d.getHours() >= 21 ? '睡前記得結帳喔' : '今天記帳了嗎？'}`, 2400);
+      const h0 = handAngles(); tween(900, t => setHands(h0.h + t*360, h0.m + t*720)).then(updateClock); break;
+    }
+    case 'window': {
+      const t = byId(THEMES, S.theme); if (t.view === 'space'){ say('窗外是土星，別看太久會想放假', 2200); break; }
+      setView(viewMode === 'day' ? 'night' : 'day'); swish(); say(viewMode === 'night' ? '天黑了，打烊前記得結帳' : '早安，新的一天！', 2000); break;
+    }
+    case 'chalk': {
+      const line = LATTE[latteIdx++ % LATTE.length];
+      say(line, 3200); face(latteIdx % 2 ? 'grin' : 'open', 1400); pop(760);
+      cashierJump();
+      tween(260, t => setArm(-30*t)).then(() => sleep(380)).then(() => tween(260, t => setArm(-30*(1-t))));
+      sparkle(76, 340);
+      break;
+    }
+    case 'sign': openCustomize('store'); break;
+    case 'printer': checkout(); break;
+  }
+}
+storeSvg.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; audio(); act(el.dataset.act, el); });
+$('#cashierWrap').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); act('cashier'); } });
+
+function handAngles(){ const d = new Date(); return {h:(d.getHours()%12)*30 + d.getMinutes()/2, m:d.getMinutes()*6}; }
+function setHands(h, m){ $('#hHand').setAttribute('transform', `rotate(${h} 290 172)`); $('#mHand').setAttribute('transform', `rotate(${m} 290 172)`); }
+function updateClock(){ const a = handAngles(); setHands(a.h, a.m); }
+
+/* ================= HUD / monitor ================= */
+function dayTotal(d){ return (d ? d.entries : []).reduce((s, e) => s + Number(e.price||0), 0); }
+let monTimer;
+function updateHud(){
+  const now = new Date(), k = todayKey(now), d = DAYS[k];
+  $('#hudDate').innerHTML = `${now.getMonth()+1}月${now.getDate()}日<span>星期${WD[now.getDay()]}</span>`;
+  const n = d ? d.entries.length : 0;
+  $('#hudToday').innerHTML = n ? `今日已記 <b>${n}</b> 筆・共 <b>NT$ ${fmt(dayTotal(d))}</b>${d.settled && d.rewarded >= n ? '・已結帳' : ''}` : '今日還沒有記帳';
+  const bp = $('#bubPts'); if (bp) bp.textContent = fmt(S.points);
+  updateCartBadge();
+}
+function monSummary(){ const d = DAYS[todayKey()]; $('#mon1').textContent = `今日 ${d ? d.entries.length : 0} 筆`; $('#mon2').textContent = `NT$ ${fmt(dayTotal(d))}`; }
+function monShow(e){ const nm = e.name.length > 7 ? e.name.slice(0,7) + '…' : e.name; $('#mon1').textContent = nm; $('#mon2').textContent = `NT$ ${fmt(e.price)}`; clearTimeout(monTimer); monTimer = setTimeout(monSummary, 1800); }
+
+/* ================= order form ================= */
+let curCat = 'food';
+function buildCats(){
+  $('#catGrid').innerHTML = CATS.map(c => `<button type="button" class="cat-btn" role="radio" aria-checked="${c.id===curCat}" data-cat="${c.id}"><svg viewBox="0 0 100 100"><use href="#ic-${c.id}"/></svg>${c.label}</button>`).join('');
+}
+$('#catGrid').addEventListener('click', e => {
+  const b = e.target.closest('.cat-btn'); if (!b) return;
+  curCat = b.dataset.cat; $$('.cat-btn').forEach(x => x.setAttribute('aria-checked', x === b)); $('#fName').placeholder = CAT[curCat].ph; pop(560);
+});
+$('#catGrid').addEventListener('keydown', e => {
+  if (!['ArrowRight','ArrowLeft','ArrowDown','ArrowUp'].includes(e.key)) return;
+  e.preventDefault(); const i = CATS.findIndex(c => c.id === curCat); const step = {ArrowRight:1, ArrowLeft:-1, ArrowDown:4, ArrowUp:-4}[e.key];
+  const n = (i + step + CATS.length) % CATS.length; const b = $(`.cat-btn[data-cat="${CATS[n].id}"]`); b.click(); b.focus();
+});
+order.addEventListener('submit', e => {
+  e.preventDefault(); audio();
+  const price = Math.round(Number($('#fPrice').value));
+  const msg = $('#msg');
+  if (!price || price <= 0){ msg.textContent = '請填一個大於 0 的金額'; const p = $('.price'); p.classList.remove('shake'); void p.offsetWidth; p.classList.add('shake'); $('#fPrice').focus(); return; }
+  if (price > 9999999){ msg.textContent = '金額太大了，確認一下有沒有多打 0'; return; }
+  msg.textContent = '';
+  const name = $('#fName').value.trim() || CAT[curCat].label;
+  const k = todayKey();
+  const d = DAYS[k] || (DAYS[k] = normDay(k));
+  const entry = {id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), name, cat:curCat, price, t:new Date().toISOString()};
+  d.entries.push(entry);
+  saveDay(k); updateHud(); updateCartBadge();
+  spawnItem(entry);
+  $('#fName').value = ''; $('#fPrice').value = '';
+  if (!compact) $('#fName').focus();
+  else {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    const r = wrap.getBoundingClientRect();
+    if (!side && (r.top < -20 || r.bottom > window.innerHeight)) setTimeout(() => wrap.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block: 'start'}), 120);
+  }
+});
+
+/* ================= conveyor ================= */
+const SCAN_X = 700, GAP = 108, SPEED = 230, BASE_Y = 548;
+const queue = []; let running = false, lastT = 0, beltOff = 0;
+const beltTop = $('#beltTop');
+function place(it){ it.el.style.transform = `translate(${(it.x - 48).toFixed(1)}px, ${BASE_Y - 92}px)`; }
+function spawnItem(entry){
+  const el = document.createElement('div'); el.className = 'item';
+  el.innerHTML = `<div class="item-in"><svg viewBox="0 0 100 100"><use href="#ic-${entry.cat}"/></svg><span class="tag">$${fmt(entry.price)}</span></div>`;
+  stage.appendChild(el);
+  const last = queue[queue.length-1];
+  const spawn = compact ? CROP.x + CROP.w - 70 : 1120;
+  const x = Math.max(spawn, last ? last.x + GAP : 0);
+  const it = {el, x, entry, state: x > spawn + 30 ? 'move' : 'drop'};
+  place(it); queue.push(it);
+  if (it.state === 'drop'){ el.classList.add('drop'); pop(420); setTimeout(() => { it.state = 'move'; el.classList.remove('drop'); }, 480); }
+  if (!running){ running = true; lastT = performance.now(); requestAnimationFrame(loop); }
+}
+function loop(now){
+  const dt = Math.min(.05, (now - lastT)/1000); lastT = now;
+  let moving = false;
+  queue.forEach((it, i) => {
+    if (it.state !== 'move') return;
+    const target = SCAN_X + i*GAP;
+    if (it.x > target + .5){ it.x = Math.max(target, it.x - SPEED*dt); moving = true; it.el.classList.add('moving'); }
+    else it.el.classList.remove('moving');
+    place(it);
+  });
+  const head = queue[0];
+  if (head && head.state === 'move' && head.x <= SCAN_X + .5) scan(head);
+  if (moving){ beltOff -= SPEED*dt; beltTop.style.backgroundPosition = `0 0, ${beltOff.toFixed(1)}px 0`; }
+  if (queue.length) requestAnimationFrame(loop); else running = false;
+}
+async function scan(it){
+  it.state = 'scan'; it.el.classList.remove('moving');
+  await tween(150, t => setArm(10*t));
+  const nose = {x:640, y:485}, cx = it.x, cy = BASE_Y - 44;
+  const beam = $('#beam'), sl = $('#scanline');
+  beam.setAttribute('points', `${nose.x},${nose.y} ${cx-30},${cy-26} ${cx-30},${cy+30}`);
+  sl.setAttribute('x1', cx - 34); sl.setAttribute('x2', cx + 34); sl.setAttribute('y1', cy); sl.setAttribute('y2', cy);
+  beam.setAttribute('opacity', .22); sl.setAttribute('opacity', 1);
+  C.gunWin && C.gunWin.setAttribute('fill', '#FFB3BB');
+  beep(); face('o', 500);
+  const bt = document.createElement('div'); bt.className = 'beep-text'; bt.textContent = 'Beep!'; bt.style.left = '560px'; bt.style.top = '418px'; stage.appendChild(bt); setTimeout(() => bt.remove(), 900);
+  await sleep(240);
+  beam.setAttribute('opacity', 0); sl.setAttribute('opacity', 0);
+  C.gunWin && C.gunWin.setAttribute('fill', '#FF4D5E');
+  tween(220, t => setArm(10*(1-t)));
+  queue.shift();
+  flyToMonitor(it);
+}
+async function flyToMonitor(it){
+  const x0 = it.x, y0 = BASE_Y - 46, x1 = 394, y1 = 459;
+  await tween(560, t => {
+    const x = x0 + (x1 - x0)*t, y = y0 + (y1 - y0)*t - Math.sin(Math.PI*t)*110, s = 1 - .75*t;
+    it.el.style.transform = `translate(${(x-48).toFixed(1)}px, ${(y-48).toFixed(1)}px) scale(${s.toFixed(3)}) rotate(${(-200*t).toFixed(1)}deg)`;
+    it.el.style.opacity = t > .75 ? (1 - (t - .75)/.25).toFixed(2) : 1;
+  });
+  it.el.remove();
+  sparkle(x1, y1); monShow(it.entry);
+  if (Math.random() < .35) say(`NT$ ${fmt(it.entry.price)}，收到！`, 1600);
+}
+function sparkle(x, y){ for (let i=0;i<8;i++){ const s = document.createElement('div'); s.className = 'spark'; s.style.left = (x-5)+'px'; s.style.top = (y-5)+'px'; stage.appendChild(s); const a = i/8*Math.PI*2; s.animate([{transform:'translate(0,0) scale(1)', opacity:1},{transform:`translate(${Math.cos(a)*42}px,${Math.sin(a)*42}px) scale(.2)`, opacity:0}], {duration:520, easing:'ease-out'}).onfinish = () => s.remove(); } }
+
+/* ================= receipt ================= */
+function rocPeriod(k){ const d = parseKey(k); const m = d.getMonth()+1, s = m % 2 ? m : m-1; return `${d.getFullYear()-1911}年${pad(s)}-${pad(s+1)}月`; }
+function genNo(){ const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = L[Math.floor(Math.random()*24)] + L[Math.floor(Math.random()*24)] + '-'; for (let i=0;i<8;i++) s += Math.floor(Math.random()*10); return s; }
+function barcode(seed){ const r = rng(hash(seed)); let s = '', w = 0; while (w < 170){ const bw = 1 + Math.floor(r()*3), gap = 1 + Math.floor(r()*3); s += `<i style="width:${bw}px;margin-right:${gap}px"></i>`; w += bw + gap; } return s; }
+function qr(seed){
+  const r = rng(hash(seed)), n = 21; let s = '';
+  const finder = (x, y) => `<rect x="${x}" y="${y}" width="7" height="7" fill="#1C1D22"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#1C1D22"/>`;
+  for (let y=0;y<n;y++) for (let x=0;x<n;x++){ const inF = (x<8&&y<8)||(x>12&&y<8)||(x<8&&y>12); if (!inF && r() < .48) s += `<rect x="${x}" y="${y}" width="1" height="1" fill="#1C1D22"/>`; }
+  return `<svg viewBox="-1 -1 23 23" shape-rendering="crispEdges"><rect x="-1" y="-1" width="23" height="23" fill="#fff"/>${finder(0,0)}${finder(14,0)}${finder(0,14)}${s}</svg>`;
+}
+function receiptHTML(day, o = {}){
+  const d = parseKey(day.date), total = dayTotal(day), n = day.entries.length;
+  const at = day.settledAt ? new Date(day.settledAt) : new Date();
+  const seed = day.date + (day.receiptNo || '');
+  const rnd = String(hash(seed) % 10000).padStart(4, '0');
+  const rows = day.entries.map(e => {
+    const t = e.t ? new Date(e.t) : null;
+    return `<div class="rl r-item${o.editable ? ' editable' : ''}"><svg viewBox="0 0 100 100"><use href="#ic-${e.cat}"/></svg><span>${esc(e.name)}<small>${(CAT[e.cat]||CAT.other).label}${e.cart ? '・清單' : ''}${t ? '・' + pad(t.getHours()) + ':' + pad(t.getMinutes()) : ''}</small></span><span class="amt">${fmt(e.price)}</span>${o.editable ? `<button class="ri-del" data-del="${e.id}" aria-label="刪除 ${esc(e.name)}">×</button>` : ''}</div>`;
+  }).join('');
+  let earn = '';
+  if (o.earned != null){
+    earn = o.earned > 0
+      ? `<div class="rl r-earn" id="earnLine"><span>本日記帳 ${n} 筆・獲得積分</span><b>+${o.earned}${o.bonus ? '（含滿 5 筆加碼 20）' : ''}</b></div><div class="rl r-earn"><span>累積積分</span><b>${fmt(o.pointsAfter)}</b></div>`
+      : `<div class="rl r-earn" id="earnLine"><span>本日積分已領過</span><b>累積 ${fmt(o.pointsAfter)}</b></div>`;
+  } else if (day.settled){
+    earn = `<div class="rl r-earn"><span>本日獲得積分</span><b>+${day.earned || 0}</b></div>`;
+  }
+  return `<div class="receipt${o.torn ? ' torn' : ''}">
+    <div class="rl r-top"></div>
+    <div class="rl r-store">${esc(S.storeName || '天天記帳舖')}</div>
+    <div class="rl r-title">記帳明細證明聯</div>
+    <div class="rl r-period">${rocPeriod(day.date)}</div>
+    <div class="rl r-no">${day.receiptNo || '尚未結帳'}</div>
+    <div class="rl r-meta">${day.date}（${WD[d.getDay()]}）${day.settledAt ? pad(at.getHours()) + ':' + pad(at.getMinutes()) + ':' + pad(at.getSeconds()) : ''}</div>
+    <div class="rl r-meta2"><span>隨機碼 ${rnd}</span><span>總計 ${fmt(total)}</span></div>
+    <div class="rl r-meta2"><span>筆數 ${n}</span><span>${esc(S.storeName || '天天記帳舖')}會員</span></div>
+    <div class="rl r-bar">${barcode(seed)}</div>
+    <div class="rl r-qr">${qr(seed + 'L')}${qr(seed + 'R')}</div>
+    <div class="rl r-sep">- - - 明　細 - - -</div>
+    ${rows}
+    <div class="rl r-sep2"></div>
+    <div class="rl r-total"><span>合計</span><span>NT$ ${fmt(total)}</span></div>
+    ${earn}
+    <div class="rl r-thanks">謝謝光臨・明天也要記帳喔</div>
+    <div class="rl r-end"></div>
+  </div>`;
+}
+
+/* ================= checkout (zoom printer + print) ================= */
+let busy = false, skip = false, filed = false;
+const ov = $('#printOv'), paper = $('#paper'), inner = $('#paperInner'), bigP = $('#bigPrinter');
+bigP.innerHTML = `<svg viewBox="0 0 240 180">${$('#printerSym').innerHTML}</svg>`;
+function sizePrinter(){ const pw = Math.min(560, window.innerWidth*(window.innerWidth < 500 ? .96 : .92), (window.innerHeight*.42)*240/180); $('#printStage').style.setProperty('--pw', pw + 'px'); return pw; }
+async function checkout(){
+  if (busy) return;
+  audio();
+  const k = todayKey(), day = DAYS[k];
+  if (!day || !day.entries.length){ say('今天還沒有記帳喔！先在右邊記一筆吧', 2600); face('o'); cashierJump(); return; }
+  busy = true; skip = false; filed = false;
+  const n = day.entries.length, fresh = Math.max(0, n - (day.rewarded || 0));
+  const bonus = (n >= 5 && !day.bonus) ? 20 : 0;
+  const earned = fresh*10 + bonus;
+  if (!day.receiptNo) day.receiptNo = genNo();
+  day.settledAt = new Date().toISOString();
+  const before = S.points, after = before + earned;
+  say('好的！幫你印今天的明細～', 2400); face('grin', 1200);
+  $('#btnPay').classList.add('pressed'); setTimeout(() => $('#btnPay').classList.remove('pressed'), 180);
+
+  // prepare overlay
+  inner.innerHTML = receiptHTML(day, {earned, bonus, pointsAfter: after});
+  inner.style.transform = ''; inner.style.position = 'absolute'; inner.style.transition = 'none';
+  paper.style.transition = 'none'; paper.style.height = '0px'; paper.style.overflowY = 'hidden'; paper.scrollTop = 0;
+  $('#pchipVal').textContent = fmt(before);
+  $('#printDone').classList.remove('on'); $('.ov-top').classList.remove('done'); $('#scrollHint').classList.remove('on'); $('#skipBtn').style.display = '';
+  sizePrinter();
+  ov.classList.add('open');
+  const scenePrinter = $('#printerSpot svg');
+  const src = scenePrinter.getBoundingClientRect();
+  const dst = bigP.getBoundingClientRect();
+  scenePrinter.style.opacity = 0;
+  bigP.style.transition = 'none';
+  bigP.style.transform = `translate(${src.left - dst.left}px, ${src.top - dst.top}px) scale(${src.width / dst.width})`;
+  void bigP.offsetWidth;
+  requestAnimationFrame(() => { ov.classList.add('show'); bigP.style.transition = 'transform .8s cubic-bezier(.3,1.15,.4,1)'; bigP.style.transform = 'none'; });
+  swish();
+  try { await document.fonts.ready; } catch(e){}
+  await sleep(reduced ? 50 : 850);
+
+  // print line by line
+  const maxH = Math.max(160, $('#paperWrap').getBoundingClientRect().bottom - $('.ov-top').getBoundingClientRect().bottom - 12);
+  const setPaper = (h, dur, steps) => {
+    const vis = Math.min(h, maxH), off = Math.max(0, h - maxH);
+    const tr = dur ? `${dur}ms steps(${steps}, end)` : 'none';
+    paper.style.transition = dur ? `height ${tr}` : 'none'; paper.style.height = vis + 'px';
+    inner.style.transition = dur ? `transform ${tr}` : 'none'; inner.style.transform = `translateY(${-off}px)`;
+  };
+  bigP.classList.add('printing');
+  let cur = 0;
+  const lines = $$('.rl', inner);
+  for (const ln of lines){
+    if (skip) break;
+    const target = ln.offsetTop + ln.offsetHeight;
+    const delta = target - cur; if (delta <= 0) continue;
+    const dur = reduced ? 20 : Math.max(120, Math.min(950, delta*8));
+    setPaper(target, dur, Math.max(2, Math.round(delta/3)));
+    buzz(dur/1000);
+    await sleep(dur + (reduced ? 0 : 50 + Math.random()*110));
+    cur = target;
+  }
+  const full = inner.scrollHeight;
+  setPaper(full, 0, 1);
+  bigP.classList.remove('printing');
+  $('#skipBtn').style.display = 'none';
+  await sleep(160);
+  cutSound();
+  inner.querySelector('.receipt').classList.add('torn');
+  // award points
+  day.settled = true; day.rewarded = n; if (bonus) day.bonus = true; day.earned = (day.earned || 0) + earned;
+  S.points = after;
+  saveDay(k); saveState(); updateHud();
+  // let the paper scroll if it is taller than the room
+  inner.style.transition = 'none'; inner.style.transform = 'none'; inner.style.position = 'relative';
+  paper.style.overflowY = 'auto'; paper.scrollTop = paper.scrollHeight;
+  if (earned > 0) awardFx(before, after);
+  $('#printDone').classList.add('on'); $('.ov-top').classList.add('done');
+  $('#fileBtn').focus({preventScroll:true});
+  // receipt taller than the screen: roll back to the top so the header can be read, then hint that it scrolls
+  if (paper.scrollHeight > paper.clientHeight + 4){
+    await sleep(earned > 0 ? 1900 : 500);
+    if (!ov.classList.contains('open')) return;
+    const from = paper.scrollTop;
+    await tween(reduced ? 1 : 1100, t => { paper.scrollTop = from * (1 - t); });
+    const hint = $('#scrollHint'); hint.classList.add('on'); setTimeout(() => hint.classList.remove('on'), 2600);
+  }
+}
+function awardFx(before, after){
+  const line = $('#earnLine'), chip = $('.ov-top .pchip');
+  const from = (line ? line.getBoundingClientRect() : paper.getBoundingClientRect());
+  const to = chip.getBoundingClientRect();
+  const ep = document.createElement('div'); ep.className = 'earn-pop'; ep.textContent = `+${after - before} 積分`;
+  ep.style.left = (from.left + from.width/2 - 60) + 'px'; ep.style.top = (from.top - 30) + 'px'; document.body.appendChild(ep); setTimeout(() => ep.remove(), 1500);
+  const cnt = Math.min(10, 3 + Math.floor((after-before)/10));
+  for (let i=0;i<cnt;i++){
+    const c = document.createElement('div'); c.className = 'coin'; c.textContent = '★';
+    const sx = from.left + from.width/2 + (Math.random()*80-40), sy = from.top + 10;
+    c.style.left = sx + 'px'; c.style.top = sy + 'px'; document.body.appendChild(c);
+    const tx = to.left + to.width/2 - sx, ty = to.top + to.height/2 - sy;
+    c.animate([{transform:'translate(0,0) scale(.6)', opacity:0},{transform:`translate(${tx*.3}px,${ty*.3 - 60}px) scale(1.1)`, opacity:1, offset:.35},{transform:`translate(${tx}px,${ty}px) scale(.7)`, opacity:1}], {duration:800 + i*70, easing:'cubic-bezier(.4,0,.6,1)', delay:i*60})
+      .onfinish = () => { c.remove(); };
+    coinSound((800 + i*130)/1000);
+  }
+  setTimeout(() => { tween(700, t => $('#pchipVal').textContent = fmt(Math.round(before + (after-before)*t))); chip.classList.remove('glow'); void chip.offsetWidth; chip.classList.add('glow'); }, 700);
+}
+function closePrint(fileIt){
+  if (!busy) return;
+  const sceneP = $('#printerSpot svg');
+  $('#scrollHint').classList.remove('on');
+  const done = () => { ov.classList.remove('open', 'show'); sceneP.style.opacity = 1; busy = false; showPoints(); updateHud(); };
+  if (fileIt && !reduced){
+    const r = $('#paperWrap').getBoundingClientRect(), b = $('#btnRec').getBoundingClientRect();
+    const fp = document.createElement('div'); fp.className = 'fly-paper';
+    Object.assign(fp.style, {left:r.left+'px', top:r.top+'px', width:r.width+'px', height:r.height+'px'});
+    document.body.appendChild(fp);
+    paper.style.visibility = 'hidden';
+    ov.classList.remove('show');
+    swish();
+    fp.animate([{transform:'none'},{transform:`translate(${b.left + b.width/2 - r.left - r.width/2}px, ${b.top + b.height/2 - r.top - r.height/2}px) scale(.08) rotate(-30deg)`, opacity:.6}], {duration:650, easing:'cubic-bezier(.5,0,.7,1)'}).onfinish = () => {
+      fp.remove(); paper.style.visibility = ''; done();
+      const rb = $('#btnRec'); rb.classList.remove('bump'); void rb.offsetWidth; rb.classList.add('bump'); pop(880);
+      say('明細收進紀錄夾了！', 2200);
+    };
+  } else { ov.classList.remove('show'); setTimeout(done, 300); }
+}
+$('#skipBtn').addEventListener('click', () => { skip = true; });
+$('#fileBtn').addEventListener('click', () => closePrint(true));
+$('#closePrint').addEventListener('click', () => closePrint(false));
+$('#btnPay').addEventListener('click', checkout);
+
+/* ================= records (binder clip) ================= */
+const recOv = $('#recOv');
+let recList = [], recCur = 0;
+function openOv(el){ el.classList.add('open'); requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show'))); }
+function closeOv(el){ el.classList.remove('show'); setTimeout(() => el.classList.remove('open'), 320); }
+$$('.overlay [data-close]').forEach(b => b.addEventListener('click', () => closeOv(b.closest('.overlay'))));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ const top = ['#detOv','#custOv','#cartOv','#recOv'].map(s => $(s)).find(o => o.classList.contains('open')); if (top) closeOv(top); else if (busy && $('#printDone').classList.contains('on')) closePrint(false); }
+  if (recOv.classList.contains('open') && !$('#detOv').classList.contains('open')){ if (e.key === 'ArrowRight') flipTo(recCur+1); if (e.key === 'ArrowLeft') flipTo(recCur-1); }
+});
+function slipHTML(d){
+  const dt = parseKey(d.date), total = dayTotal(d), n = d.entries.length, show = d.entries.slice(0, 7);
+  return `<div class="slip-in">
+    <div class="slip-store">${esc(S.storeName || '天天記帳舖')}</div>
+    <div class="slip-title">記帳明細</div>
+    <div class="slip-date">${dt.getFullYear()}.${pad(dt.getMonth()+1)}.${pad(dt.getDate())}（${WD[dt.getDay()]}）</div>
+    <div>${show.map(e => `<div class="slip-row"><svg viewBox="0 0 100 100"><use href="#ic-${e.cat}"/></svg><span>${esc(e.name)}</span><span>${fmt(e.price)}</span></div>`).join('')}
+    ${n > 7 ? `<div class="more">……還有 ${n-7} 筆</div>` : ''}</div>
+    <div class="slip-total"><span>合計</span><b>NT$ ${fmt(total)}</b></div>
+    <div class="slip-foot">${n} 筆${d.settled ? `・獲得積分 +${d.earned || 0}` : '・還沒結帳'}</div>
+    <div class="stamp ${d.settled ? 'ok' : 'no'}">${d.settled ? '已結帳' : '未結帳'}</div>
+  </div>`;
+}
+const CLIP_SVG = `<svg class="clip-svg" viewBox="0 0 150 96" aria-hidden="true">
+  <defs><linearGradient id="clipBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5A6075"/><stop offset=".5" stop-color="#22252F"/><stop offset="1" stop-color="#0F1116"/></linearGradient></defs>
+  <path d="M42 54 L32 8 Q31 2 37 2 L60 2 Q64 2 63 8 L58 54" fill="none" stroke="url(#g-chrome)" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M92 54 L87 8 Q86 2 90 2 L113 2 Q119 2 118 8 L108 54" fill="none" stroke="url(#g-chrome)" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M22 50 L128 50 L120 92 L30 92 Z" fill="url(#clipBody)"/>
+  <path d="M26 54 L124 54" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>
+  <ellipse cx="44" cy="52" rx="7" ry="4" fill="#9AA5B8"/><ellipse cx="106" cy="52" rx="7" ry="4" fill="#9AA5B8"/>
+</svg>`;
+function openRecords(){
+  audio(); pop(760);
+  recList = Object.values(DAYS).filter(d => d.entries.length).sort((a,b) => a.date < b.date ? 1 : -1);
+  recCur = Math.min(recCur, Math.max(0, recList.length-1));
+  const now = new Date(), mk = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+  const mDays = recList.filter(d => d.date.startsWith(mk));
+  $('#monthSum').innerHTML = `本月共 <b>${mDays.reduce((s,d) => s + d.entries.length, 0)}</b> 筆・支出 <b>NT$ ${fmt(mDays.reduce((s,d) => s + dayTotal(d), 0))}</b>・累積積分 <b>${fmt(S.points)}</b>`;
+  const body = $('#recBody');
+  if (!recList.length){ body.innerHTML = `<div class="empty">紀錄夾還是空的。<br>在右邊記下第一筆，按「結帳」把明細印出來，它就會夾在這裡。</div>`; openOv(recOv); return; }
+  body.innerHTML = `<div class="clip-area" id="clipArea">${CLIP_SVG}<div class="board"></div><div id="stack">${recList.map((d,i) => `<div class="slip" data-i="${i}">${slipHTML(d)}</div>`).join('')}</div></div>
+    <div class="rec-nav"><button class="nav-btn" id="prevBtn" aria-label="較新的一天">‹</button><div class="rec-label" id="recLabel"></div><button class="nav-btn" id="nextBtn" aria-label="較舊的一天">›</button></div>
+    <div class="scrub" id="scrub">${recList.map(() => '<i></i>').join('')}</div>
+    <div class="hint">${matchMedia('(hover: none)').matches ? '在紙張上左右滑動翻頁・點一下看完整明細' : '滑鼠在紙張上左右移動就能翻頁・點一下看完整明細'}</div>`;
+  const area = $('#clipArea');
+  area.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') return; const r = area.getBoundingClientRect(); const ratio = (e.clientX - r.left)/r.width; flipTo(Math.floor(Math.min(.999, Math.max(0, ratio)) * recList.length)); });
+  area.addEventListener('wheel', e => { e.preventDefault(); if (Math.abs(e.deltaY) + Math.abs(e.deltaX) < 4) return; flipTo(recCur + ((e.deltaY || e.deltaX) > 0 ? 1 : -1)); }, {passive:false});
+  let tx = null, tCur = 0, moved = false;
+  area.addEventListener('touchstart', e => { tx = e.touches[0].clientX; tCur = recCur; moved = false; }, {passive:true});
+  area.addEventListener('touchmove', e => { if (tx == null) return; const dx = tx - e.touches[0].clientX; if (Math.abs(dx) > 8) moved = true; flipTo(tCur + Math.round(dx/50)); }, {passive:true});
+  area.addEventListener('touchend', () => { tx = null; });
+  $('#stack').addEventListener('click', e => { if (moved){ moved = false; return; } const s = e.target.closest('.slip'); if (s && Number(s.dataset.i) === recCur) openDetail(recList[recCur].date); });
+  $('#prevBtn').addEventListener('click', () => flipTo(recCur-1));
+  $('#nextBtn').addEventListener('click', () => flipTo(recCur+1));
+  updateFlip(true);
+  openOv(recOv);
+}
+function flipTo(i){ i = Math.max(0, Math.min(recList.length-1, i)); if (i === recCur) return; recCur = i; swish(); updateFlip(); }
+function updateFlip(){
+  $$('#stack .slip').forEach((el, i) => {
+    const k = i - recCur;
+    if (k < 0){ el.style.transform = `translateY(-8px) rotateX(${150 + Math.max(-6,k)*3}deg)`; el.style.opacity = 0; el.style.zIndex = 200 + k; el.style.pointerEvents = 'none'; }
+    else { const r = ((hash(recList[i].date) % 9) - 4) * .45; el.style.transform = `translateY(${Math.min(k,6)*5}px) rotate(${k ? r : 0}deg)`; el.style.opacity = k > 6 ? 0 : 1; el.style.zIndex = 100 - k; el.style.pointerEvents = k === 0 ? 'auto' : 'none'; }
+  });
+  const d = recList[recCur]; if (!d) return;
+  const dt = parseKey(d.date);
+  $('#recLabel').textContent = `${dt.getMonth()+1}月${dt.getDate()}日（${WD[dt.getDay()]}）・${recCur+1}/${recList.length}`;
+  $$('#scrub i').forEach((x, i) => x.classList.toggle('on', i === recCur));
+  $('#prevBtn').disabled = recCur === 0; $('#nextBtn').disabled = recCur === recList.length-1;
+}
+function openDetail(key){
+  const d = DAYS[key]; if (!d) return;
+  const dt = parseKey(key);
+  $('#detTitle').textContent = `${dt.getMonth()+1}月${dt.getDate()}日 明細`;
+  $('#detPaper').innerHTML = receiptHTML(d, {editable:true, torn:true});
+  $('#detPaper').dataset.key = key;
+  pop(700); openOv($('#detOv'));
+}
+$('#detPaper').addEventListener('click', e => {
+  const b = e.target.closest('[data-del]'); if (!b) return;
+  const key = $('#detPaper').dataset.key, d = DAYS[key]; if (!d) return;
+  const row = b.closest('.r-item');
+  if (!row.classList.contains('arm')){ row.classList.add('arm'); b.textContent = '刪'; b.style.background = '#FFE1DC'; b.style.color = '#F0614F'; b.setAttribute('aria-label', '再按一次確認刪除'); setTimeout(() => { if (row.isConnected){ row.classList.remove('arm'); b.textContent = '×'; b.style.background = ''; b.style.color = ''; } }, 2500); return; }
+  d.entries = d.entries.filter(x => x.id !== b.dataset.del);
+  d.rewarded = Math.min(d.rewarded || 0, d.entries.length);
+  saveDay(key); updateHud(); monSummary(); tick();
+  if (d.entries.length) openDetail(key); else closeOv($('#detOv'));
+  if (recOv.classList.contains('open')){ const keep = recCur; openRecords(); recCur = Math.min(keep, recList.length-1); if (recList.length) updateFlip(); }
+});
+$('#btnRec').addEventListener('click', openRecords);
+
+/* ================= customize ================= */
+const custOv = $('#custOv');
+let custTab = 'store', pending = null;
+const owns = (kind, o) => !o.cost || S.owned.includes(kind + ':' + o.id);
+function optTile(kind, o, selected, sw){
+  const has = owns(kind, o);
+  const st = selected ? '使用中' : has ? '點選使用' : (pending === kind+':'+o.id ? `再按一次花 ${o.cost} 分` : `★ ${o.cost}`);
+  return `<button class="opt${has ? '' : ' locked'}${pending === kind+':'+o.id ? ' confirm' : ''}" aria-pressed="${selected}" data-kind="${kind}" data-id="${o.id}">${sw}<span>${o.name}</span><span class="st${has ? '' : ' cost'}">${st}</span></button>`;
+}
+function renderCust(){
+  $('#custPts').textContent = fmt(S.points);
+  $$('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === custTab));
+  const L = S.look; let h = '';
+  if (custTab === 'store'){
+    h += `<div class="sec"><h4>店名 <small>會出現在招牌和收據上</small></h4><div class="name-row"><input id="storeName" maxlength="10" value="${esc(S.storeName)}" aria-label="店名"></div></div>`;
+    h += `<div class="sec"><h4>店貓的名字</h4><div class="name-row"><input id="catName" maxlength="8" value="${esc(CATN())}" aria-label="店貓的名字"></div></div>`;
+    h += `<div class="sec"><h4>商店場景 <small>用積分解鎖</small></h4><div class="opts">${THEMES.map(t => optTile('theme', t, S.theme === t.id, `<span class="sw" style="background:linear-gradient(180deg, ${t.ceil} 0 14%, ${t.wall} 14% 58%, ${t.cfront} 58% 64%, ${t.cstripe} 64% 69%, ${t.cfront} 69%);box-shadow:inset 0 0 0 3px ${t.sign}"></span>`)).join('')}</div></div>`;
+  } else {
+    const mini = patch => headSwatch(Object.assign({}, L, patch));
+    h += `<div class="sec"><h4>店員的名字 <small>會寫在名牌上</small></h4><div class="name-row"><input id="clerkName" maxlength="6" value="${esc(CLERK())}" aria-label="店員的名字"></div></div>`;
+    h += `<div class="sec"><h4>髮型</h4><div class="opts">${HAIRS.map(o => optTile('hair', o, L.hair === o.id, mini({hair:o.id, acc:'none'}))).join('')}</div></div>`;
+    h += `<div class="sec"><h4>髮色</h4><div class="opts">${HAIRC.map(o => optTile('hairColor', o, L.hairColor === o.id, `<span class="sw round" style="background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.6), transparent 45%), ${o.c}"></span>`)).join('')}</div></div>`;
+    h += `<div class="sec"><h4>制服</h4><div class="opts">${SHIRTS.map(o => optTile('shirt', o, L.shirt === o.id, `<span class="sw" style="background:linear-gradient(90deg, rgba(255,255,255,.3), transparent 40%, rgba(0,0,0,.2)), ${o.c}"></span>`)).join('')}</div></div>`;
+    h += `<div class="sec"><h4>配飾</h4><div class="opts">${ACCS.map(o => optTile('acc', o, L.acc === o.id, mini({acc:o.id}))).join('')}</div></div>`;
+    h += `<div class="sec"><h4>膚色</h4><div class="opts">${SKINS.map(o => optTile('skin', o, L.skin === o.id, `<span class="sw round" style="background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.6), transparent 45%), ${o.c}"></span>`)).join('')}</div></div>`;
+  }
+  $('#custBody').innerHTML = h;
+  const cn = $('#catName');
+  if (cn) cn.addEventListener('change', () => { S.catName = cn.value.trim() || '薇薇'; cn.value = S.catName; saveState(); miniBubble(`${S.catName}：喵～`, 128, 136); meow(); });
+  const kn = $('#clerkName');
+  if (kn) kn.addEventListener('change', () => { S.clerkName = kn.value.trim() || '小樂'; kn.value = S.clerkName; saveState(); buildCashier(); say(`以後叫我${S.clerkName}吧！`, 2200); face('grin', 1200); cashierJump(); });
+  const sn = $('#storeName');
+  if (sn) sn.addEventListener('change', () => { S.storeName = sn.value.trim() || '天天記帳舖'; saveState(); applyTheme(); toast('店名改好了'); });
+}
+const KIND = {theme:THEMES, hair:HAIRS, hairColor:HAIRC, shirt:SHIRTS, acc:ACCS, skin:SKINS};
+$('#custBody').addEventListener('click', e => {
+  const b = e.target.closest('.opt'); if (!b) return;
+  const kind = b.dataset.kind, o = byId(KIND[kind], b.dataset.id), key = kind + ':' + o.id;
+  if (!owns(kind, o)){
+    if (S.points < o.cost){ b.classList.remove('cant'); void b.offsetWidth; b.classList.add('cant'); toast(`還差 ${o.cost - S.points} 積分，多記幾筆再來`); return; }
+    if (pending !== key){ pending = key; pop(500); renderCust(); return; }
+    S.points -= o.cost; S.owned.push(key); pending = null; coinSound(); toast(`解鎖「${o.name}」！`);
+  } else pending = null;
+  if (kind === 'theme') S.theme = o.id; else S.look[kind] = o.id;
+  saveState(); applyAll(); renderCust(); pop(820);
+  if (kind !== 'theme'){ say('新造型！好看嗎？', 2000); face('grin', 1200); cashierJump(); }
+});
+$$('.tab').forEach(t => t.addEventListener('click', () => { custTab = t.dataset.tab; pending = null; renderCust(); }));
+function openCustomize(tab){ audio(); pop(760); if (tab) custTab = tab; pending = null; renderCust(); openOv(custOv); }
+$('#btnCust').addEventListener('click', () => openCustomize());
+
+/* ================= shopping list ================= */
+const cartOv = $('#cartOv');
+let cartCat = 'daily';
+const SUGG = [{name:'衛生紙', cat:'daily', price:129},{name:'鮮奶', cat:'drink', price:89},{name:'雞蛋', cat:'food', price:75},{name:'洗衣精', cat:'daily', price:199},{name:'悠遊卡加值', cat:'trans', price:500},{name:'筆記本', cat:'study', price:45}];
+function cartDoneIds(){ const d = DAYS[todayKey()]; return new Set(d ? d.entries.filter(e => e.cart).map(e => e.cart) : []); }
+function updateCartBadge(){ const done = cartDoneIds(); const left = S.cart.filter(i => !done.has(i.id)).length; const b = $('#cartBadge'); b.textContent = left; b.hidden = !left; }
+function buildCartCats(){ $('#cartCats').innerHTML = CATS.map(c => `<button type="button" class="ccat" role="radio" aria-checked="${c.id===cartCat}" data-cat="${c.id}"><svg viewBox="0 0 100 100"><use href="#ic-${c.id}"/></svg>${c.label}</button>`).join(''); }
+$('#cartCats').addEventListener('click', e => { const b = e.target.closest('.ccat'); if (!b) return; cartCat = b.dataset.cat; $$('.ccat').forEach(x => x.setAttribute('aria-checked', x === b)); pop(560); });
+function renderCart(){
+  const done = cartDoneIds();
+  const items = [...S.cart].sort((a,b) => (done.has(a.id) - done.has(b.id)));
+  const bought = S.cart.filter(i => done.has(i.id));
+  const d = DAYS[todayKey()];
+  const spent = d ? d.entries.filter(e => e.cart).reduce((s,e) => s + Number(e.price||0), 0) : 0;
+  $('#cartSum').innerHTML = S.cart.length ? `<span>今天買了 <b>${bought.length}</b> / ${S.cart.length} 項</span><span>清單花費 <b>NT$ ${fmt(spent)}</b></span>` : '';
+  const list = $('#cartList');
+  if (!S.cart.length){
+    list.innerHTML = `<div class="cart-empty">清單還是空的。在上面輸入常買的東西，或先點下面幾個試試：<div class="sugg">${SUGG.map((x,i) => `<button type="button" data-sugg="${i}">${x.name}・$${x.price}</button>`).join('')}</div></div>`;
+  } else {
+    list.innerHTML = items.map(i => { const on = done.has(i.id); return `<div class="crow${on ? ' done' : ''}" data-id="${i.id}">
+      <button type="button" class="cbox" role="checkbox" aria-checked="${on}" aria-label="${on ? '取消勾選' : '買了'} ${esc(i.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+      <svg class="cic" viewBox="0 0 100 100" aria-hidden="true"><use href="#ic-${i.cat}"/></svg>
+      <div class="cname"><span class="cn">${esc(i.name)}</span><small>${(CAT[i.cat]||CAT.other).label}${on ? '・已記入今天明細' : ''}</small></div>
+      <label class="cprice"><span>$</span><input type="number" inputmode="numeric" min="1" step="1" value="${i.price || ''}" placeholder="金額" aria-label="${esc(i.name)} 金額"${on ? ' disabled' : ''}></label>
+      <button type="button" class="cdel" aria-label="從清單移除 ${esc(i.name)}">×</button>
+    </div>`; }).join('');
+  }
+  updateCartBadge();
+}
+function addCartItem(name, cat, price){
+  if (S.cart.length >= 60){ toast('清單最多 60 項，先移除一些吧'); return false; }
+  if (S.cart.some(i => i.name === name)){ toast(`「${name}」已經在清單上了`); return false; }
+  S.cart.push({id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,5), name, cat, price: price || 0});
+  saveState(); renderCart(); pop(820); return true;
+}
+$('#cartAdd').addEventListener('submit', e => {
+  e.preventDefault(); audio();
+  const name = $('#cName').value.trim();
+  if (!name){ const n = $('#cName'); n.classList.remove('shake'); void n.offsetWidth; n.classList.add('shake'); n.focus(); return; }
+  const price = Math.max(0, Math.round(Number($('#cPrice').value) || 0));
+  if (addCartItem(name, cartCat, price)){ $('#cName').value = ''; $('#cPrice').value = ''; if (!compact) $('#cName').focus(); else document.activeElement.blur(); }
+});
+$('#cartList').addEventListener('click', e => {
+  const sg = e.target.closest('[data-sugg]');
+  if (sg){ const x = SUGG[Number(sg.dataset.sugg)]; addCartItem(x.name, x.cat, x.price); return; }
+  const row = e.target.closest('.crow'); if (!row) return;
+  const item = S.cart.find(i => i.id === row.dataset.id); if (!item) return;
+  if (e.target.closest('.cbox')) return toggleCart(item, row);
+  const del = e.target.closest('.cdel');
+  if (del){
+    if (!del.classList.contains('arm')){ del.classList.add('arm'); del.textContent = '移除'; setTimeout(() => { if (del.isConnected){ del.classList.remove('arm'); del.textContent = '×'; } }, 2500); return; }
+    S.cart = S.cart.filter(i => i !== item); saveState(); tick(); renderCart(); toast(`已從清單移除「${item.name}」`);
+  }
+});
+$('#cartList').addEventListener('change', e => {
+  const inp = e.target.closest('.cprice input'); if (!inp) return;
+  const item = S.cart.find(i => i.id === inp.closest('.crow').dataset.id); if (!item) return;
+  item.price = Math.max(0, Math.round(Number(inp.value) || 0)); saveState();
+});
+function toggleCart(item, row){
+  audio();
+  const k = todayKey(), d = DAYS[k] || (DAYS[k] = normDay(k));
+  const ex = d.entries.find(e => e.cart === item.id);
+  if (ex){
+    d.entries = d.entries.filter(e => e !== ex);
+    d.rewarded = Math.min(d.rewarded || 0, d.entries.length);
+    saveDay(k); updateHud(); monSummary(); tick(); renderCart();
+    toast(`已把「${item.name}」從今天的明細拿掉`);
+    return;
+  }
+  const inp = row.querySelector('.cprice input');
+  const price = Math.round(Number(inp.value) || item.price || 0);
+  if (!price || price <= 0){ const l = row.querySelector('.cprice'); l.classList.remove('shake'); void l.offsetWidth; l.classList.add('shake'); inp.focus(); toast('先填金額，再打勾'); return; }
+  if (price > 9999999){ toast('金額太大了，確認一下有沒有多打 0'); return; }
+  item.price = price; saveState();
+  const entry = {id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), name:item.name, cat:item.cat, price, t:new Date().toISOString(), cart:item.id};
+  d.entries.push(entry);
+  saveDay(k); updateHud();
+  spawnItem(entry);
+  pop(980); coinSound();
+  say(`清單上的「${item.name}」買到了，幫你記進明細！`, 2600); face('grin', 1200);
+  renderCart();
+}
+function openCart(){ audio(); pop(760); buildCartCats(); renderCart(); openOv(cartOv); }
+$('#btnCart').addEventListener('click', openCart);
+
+/* ================= misc ================= */
+let toastT;
+function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 2200); }
+function updateMute(){ $('#muteText').textContent = S.muted ? '音效關' : '音效開'; $('#muteBtn').setAttribute('aria-pressed', S.muted); $('#muteWave').style.display = S.muted ? 'none' : ''; }
+$('#muteBtn').addEventListener('click', () => { S.muted = !S.muted; saveLocal(); updateMute(); if (!S.muted) pop(); });
+function applyAll(){ applyTheme(); buildCashier(); showPoints(); updateHud(); monSummary(); updateMute(); updateCartBadge(); if ($('#cartOv').classList.contains('open')) renderCart(); }
+
+/* ================= boot ================= */
+loadLocal();
+buildFloor(); buildCats(); $('#fName').placeholder = CAT[curCat].ph;
+fit(); applyAll(); document.addEventListener('pointerdown', () => audio(), {once:true}); updateClock(); setInterval(() => { updateClock(); updateHud(); }, 20000);
+if (!S.welcomed){ setTimeout(() => say(`歡迎光臨！我是店員${CLERK()}，點我聊聊天，燈、${CATN()}、盆栽也都能點喔`, 4600), 400); S.welcomed = true; saveLocal(); }
+else setTimeout(() => say(`歡迎回來！${CLERK()}等你好久了，今天要記什麼？`, 2600), 400);
+initRemote();
+})();
+</script>
+</body>
+</html>
