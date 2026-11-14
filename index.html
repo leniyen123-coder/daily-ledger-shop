@@ -787,7 +787,7 @@ body.side .mtool{gap:8px 12px}
           <rect x="84" y="355" width="488" height="3" fill="#fff" opacity=".5"/>
 
           <!-- POS monitor -->
-          <g id="monitor">
+          <g id="monitor" class="hot" data-act="monitor">
             <rect x="344" y="296" width="20" height="26" fill="#3A3F52"/>
             <ellipse cx="354" cy="324" rx="34" ry="7" fill="#2A2F45"/>
             <rect x="286" y="216" width="136" height="86" rx="12" fill="#2A2F45"/>
@@ -1175,7 +1175,7 @@ function fit(){
   }
 }
 let fitRaf = 0;
-const refit = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fit); };
+const refit = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(() => { fit(); renderMon(); }); };
 window.addEventListener('resize', refit);
 window.addEventListener('resize', () => { if (busy) sizePrinter(); });
 window.addEventListener('orientationchange', () => setTimeout(fit, 250));
@@ -1404,6 +1404,12 @@ function act(name, el){
     }
     case 'sign': openCustomize('store'); break;
     case 'printer': checkout(); break;
+    case 'monitor': {
+      const d = DAYS[todayKey()], n = d ? d.entries.length : 0;
+      tick(); face('open', 1000);
+      say(n ? `今天記了 ${n} 筆，共 NT$ ${fmt(dayTotal(d))}` : '今天還沒有記帳，螢幕空空的', 3000);
+      break;
+    }
   }
 }
 storeSvg.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (!el) return; audio(); act(el.dataset.act, el); });
@@ -1424,8 +1430,39 @@ function updateHud(){
   const bp = $('#bubPts'); if (bp) bp.textContent = fmt(S.points);
   updateCartBadge();
 }
-function monSummary(){ const d = DAYS[todayKey()]; $('#mon1').textContent = `今日 ${d ? d.entries.length : 0} 筆`; $('#mon2').textContent = `NT$ ${fmt(dayTotal(d))}`; }
-function monShow(e){ const nm = e.name.length > 7 ? e.name.slice(0,7) + '…' : e.name; $('#mon1').textContent = nm; $('#mon2').textContent = `NT$ ${fmt(e.price)}`; clearTimeout(monTimer); monTimer = setTimeout(monSummary, 1800); }
+/* ---- POS screen: shrink long numbers to fit, never below a readable on-screen size; then switch to 萬／億 ---- */
+const MON_W = 108;                 // usable width inside the screen (SVG units)
+let monState = {label:'今日 0 筆', amount:0};
+function compactTW(n){
+  const out = (v, d) => { const [i, f] = v.toFixed(d).split('.'); const frac = f ? f.replace(/0+$/, '') : ''; return Number(i).toLocaleString('zh-TW') + (frac ? '.' + frac : ''); };
+  if (n >= 1e8) return out(n/1e8, n >= 1e10 ? 0 : 2) + '億';
+  if (n >= 1e4) return out(n/1e4, n >= 1e7 ? 0 : 1) + '萬';
+  return fmt(n);
+}
+function fitSvgText(el, maxFs, minFs){
+  for (let fs = maxFs; fs >= minFs; fs -= .5){ el.setAttribute('font-size', fs); if (el.getComputedTextLength() <= MON_W) return true; }
+  el.setAttribute('font-size', minFs); return false;
+}
+function setMoneyText(el, str){
+  while (el.firstChild) el.removeChild(el.firstChild);
+  const t = document.createElementNS(SVGNS, 'tspan'); t.setAttribute('font-size', '64%'); t.setAttribute('fill', '#2E6F66'); t.textContent = 'NT$ ';
+  el.appendChild(t); el.appendChild(document.createTextNode(str));
+}
+function renderMon(){
+  const m1 = $('#mon1'), m2 = $('#mon2');
+  // keep the text at least ~9px tall on the actual screen, whatever the stage scale is
+  const minU = px => Math.max(px / Math.max(scale, .2), 9);
+  m1.textContent = monState.label;
+  fitSvgText(m1, 15, Math.min(15, minU(8)));
+  const n = Number(monState.amount) || 0;
+  const minBig = Math.min(22, minU(10));
+  setMoneyText(m2, fmt(n));
+  if (!fitSvgText(m2, 22, minBig) && n >= 1e4){ setMoneyText(m2, compactTW(n)); fitSvgText(m2, 22, minBig); }
+  const full = `NT$ ${fmt(n)}`;
+  $('#monitor').setAttribute('aria-label', `${monState.label}，${full}`);
+}
+function monSummary(){ const d = DAYS[todayKey()]; monState = {label:`今日 ${d ? d.entries.length : 0} 筆`, amount: dayTotal(d)}; renderMon(); }
+function monShow(e){ const nm = e.name.length > 9 ? e.name.slice(0,9) + '…' : e.name; monState = {label:nm, amount:e.price}; renderMon(); clearTimeout(monTimer); monTimer = setTimeout(monSummary, 1800); }
 
 /* ================= order form ================= */
 let curCat = 'food';
@@ -1441,13 +1478,16 @@ $('#catGrid').addEventListener('keydown', e => {
   e.preventDefault(); const i = CATS.findIndex(c => c.id === curCat); const step = {ArrowRight:1, ArrowLeft:-1, ArrowDown:4, ArrowUp:-4}[e.key];
   const n = (i + step + CATS.length) % CATS.length; const b = $(`.cat-btn[data-cat="${CATS[n].id}"]`); b.click(); b.focus();
 });
+let bigOk = 0;
+$('#fPrice').addEventListener('input', () => { bigOk = 0; $('#msg').textContent = ''; });
 order.addEventListener('submit', e => {
   e.preventDefault(); audio();
   const price = Math.round(Number($('#fPrice').value));
   const msg = $('#msg');
   if (!price || price <= 0){ msg.textContent = '請填一個大於 0 的金額'; const p = $('.price'); p.classList.remove('shake'); void p.offsetWidth; p.classList.add('shake'); $('#fPrice').focus(); return; }
-  if (price > 9999999){ msg.textContent = '金額太大了，確認一下有沒有多打 0'; return; }
-  msg.textContent = '';
+  if (price > 9999999){ msg.textContent = '單筆最多 NT$ 9,999,999，確認一下有沒有多打 0'; return; }
+  if (price >= 100000 && bigOk !== price){ bigOk = price; msg.textContent = `NT$ ${fmt(price)}，金額比較大，沒有多打 0 的話再按一次確定`; $('#okBtn').focus(); return; }
+  bigOk = 0; msg.textContent = '';
   const name = $('#fName').value.trim() || CAT[curCat].label;
   const k = todayKey();
   const d = DAYS[k] || (DAYS[k] = normDay(k));
@@ -1944,6 +1984,7 @@ function applyAll(){ applyTheme(); buildCashier(); showPoints(); updateHud(); mo
 loadLocal();
 buildFloor(); buildCats(); $('#fName').placeholder = CAT[curCat].ph;
 fit(); applyAll();
+try { document.fonts.ready.then(() => renderMon()); } catch(e){}
 /* ---- sound unlock: iPhone/iPad need a real tap (touchend/click), ignore the ring/silent switch only in "playback" mode, and suspend audio after the app goes to the background ---- */
 const SILENT = 'data:audio/wav;base64,UklGRvQHAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YdAHAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
 let silentEl = null;
